@@ -392,13 +392,11 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # Streamer configuration
 #
-# CONFIG_USE_AS_AP is not set
+CONFIG_USE_AS_AP=y
 
 #
 # Credentials for connecting to another access-point
 #
-CONFIG_EXAMPLE_SSID="drone_wifi"
-CONFIG_EXAMPLE_PASSWORD="wifi-wifi"
 # end of Credentials for connecting to another access-point
 
 CONFIG_ENABLE_MDNS=y
