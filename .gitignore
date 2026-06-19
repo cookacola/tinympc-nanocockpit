@@ -177,3 +177,10 @@ sdkconfig.old
 ## ROS
 /log
 /install
+
+## GAP SDK out-of-tree build dirs (examples/*/BUILD)
+BUILD/
+
+## AI-deck dev tooling scratch output
+/tools/stream_out/
+/tools/stream_test_out/
