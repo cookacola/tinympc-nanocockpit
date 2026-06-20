@@ -1,0 +1,11 @@
+# FLOAT[i] = INT[i] * eps_out + bias[i]
+# outputs in order: TL_X, TL_Y, TR_X, TR_Y, BR_X, BR_Y, BL_X, BL_Y
+# eps_out = 1.61093718e-04
+FLOAT_TL_X  = INT_TL_X  * 1.61094e-04 + 7.67035e-01
+FLOAT_TL_Y  = INT_TL_Y  * 1.61094e-04 + 4.21470e-01
+FLOAT_TR_X  = INT_TR_X  * 1.61094e-04 + 8.18451e-01
+FLOAT_TR_Y  = INT_TR_Y  * 1.61094e-04 + 7.12229e-01
+FLOAT_BR_X  = INT_BR_X  * 1.61094e-04 + 8.45009e-01
+FLOAT_BR_Y  = INT_BR_Y  * 1.61094e-04 + 7.05781e-01
+FLOAT_BL_X  = INT_BL_X  * 1.61094e-04 + 8.06453e-01
+FLOAT_BL_Y  = INT_BL_Y  * 1.61094e-04 + 3.80487e-01
