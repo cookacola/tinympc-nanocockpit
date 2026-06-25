@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-CORE ?= 1
+CORE ?= 8
 
 APP = main
 APP_SRCS := $(wildcard src/*.c)
