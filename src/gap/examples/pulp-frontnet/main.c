@@ -1,9 +1,10 @@
 /*
  * main.c
- * Elia Cereda <elia.cereda@idsia.ch>
+ * Charles Chen <cc4919@columbia.edu>
  *
- * Copyright (C) 2022-2025 IDSIA, USI-SUPSI
- * 
+ * Preliminary v1 firmware. Blocking pure-producer loop: camera -> resize ->
+ * gate8 inference -> dequant -> send corners to the STM32 over UART. No CO_FN.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,257 +16,180 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
- * This software is based on the following publication:
- *    E. Cereda, A. Giusti, D. Palossi. "NanoCockpit: Performance-optimized 
- *    Application Framework for AI-based Autonomous Nanorobotics"
- * We kindly ask for a citation if you use in academic work.
  */
 
-#include "config.h"
-#include "coroutine.h"
-#include "camera.h"
-#include "cluster.h"
-#include "cpx/cpx.h"
-#include "debug.h"
-#include "rng.h"
-#include "soc.h"
-#include "streamer.h"
-#include "time.h"
-#include "trace.h"
-#include "queue.h"
-#include "uart.h"
-#include "uart_protocol.h"
-
 #include "mem.h"
-#include "network.h"
-
-#include "pulp_nn_utils.h"
+#include "network.h"          // gate8-dory network API
+#include "config.h"           // HIMAX_FORMAT must be 2/HALF, plus CAMERA_CAPTURE_* and CAMERA_CROP_*
+#include "camera/himax.h"     // himax_t driver
+#include "camera.h"           // frame_t, only buffer and buffer_size used
+#include "crc32.h"
 
 #include <pmsis.h>
 #include <bsp/ram.h>
-
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
-static uart_t uart;
-static uart_protocol_t uart_protocol;
-static camera_t camera;
-static cpx_t cpx;
-static streamer_t streamer;
-static pi_device_t cluster;
+#define IMG_W            160
+#define IMG_H_CAM        160          // cropped sensor frame
+#define IMG_H_NET        96           // net rows, 15360/160
+#define N_CORNERS        8            // network output count
+#define L2_BUF_SIZE      380000       // same as gate8-dory main
 
-static PI_FC_L1 state_msg_t latest_state;
-static PI_FC_L1 uint32_t state_timestamp;
+// Diagnostic mode. 0 = camera capture, the real pipeline. 1 = camera init but
+// no capture, memset input. 2 = no camera, memset input.
+#define GATE8_CAM_MODE 0
 
-static PI_FC_L1 tof_msg_t latest_tof;
-static PI_FC_L1 uint32_t tof_timestamp;
+/* FLOAT = INT*EPS + BIAS. Order TL,TR,BR,BL. From output_dequant.txt. */
+#define GATE8_EPS  1.61093718e-04f
+static const float GATE8_BIAS[N_CORNERS] = {
+  0.767035f, 0.421470f, 0.818451f, 0.712229f,
+  0.845009f, 0.705781f, 0.806453f, 0.380487f
+};
 
-static PI_L2 inference_stamped_msg_t latest_inference;
+#define GATE8_MSG_HEADER "\x90\x19\x8\x33"   // gate8 message header
+typedef struct __attribute__((packed)) {
+  uint32_t stm32_timestamp;     // 0 in v1, no state forward
+  float    corner[N_CORNERS];   // dequantized corners, normalized image coords
+} gate8_payload_t;
+typedef struct __attribute__((packed)) {
+  uint8_t  header[4];
+  gate8_payload_t p;
+  uint32_t checksum;            // CRC32 over header+payload
+} gate8_msg_t;
 
-static void *l2_buffer;
-static size_t l2_buffer_size;
-
-typedef struct inference_args_s {
-    uint32_t stm32_timestamp;
-    frame_t *camera_frame;
-    pi_task_t *frame_done;
-} inference_args_t;
-
-static pi_device_t *ram;
-static void *test_input_l3;
-
-static PI_FC_L1 co_fn_ctx_t inference_ctx;
-static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
-
-CO_FN_DECLARE(inference_task);
-
-CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
-{
-    static PI_FC_L1 bool camera_started = false;
-    static PI_FC_L1 inference_args_t inference_args;
-    static PI_FC_L1 co_event_t frame_done;
-    static PI_FC_L1 co_event_t inference_done;
-    static PI_FC_L1 co_event_t streamer_tx_done;
-
-    // Load static test image for debugging
-    // pi_ram_read_async(ram, (uint32_t)test_input_l3, camera_frame->buffer, NETWORK_INPUT_SIZE, co_event_init(&streamer_tx_done));
-    // CO_WAIT(&streamer_tx_done);
-
-    if (camera_started) {
-#ifdef NETWORK_ONBOARD_INFERENCE
-        // Wait until previous inference has completed before starting a new one
-        while (!co_event_is_done(&inference_done)) {
-            CO_WAIT(&inference_done);
-        }
-#endif
-
-        while (!co_event_is_done(&streamer_tx_done)) {
-            CO_WAIT(&streamer_tx_done);
-        }
+/* Vertical INTER_AREA resize 160 -> 96, width unchanged. scale 160/96 = 5/3,
+ * so weights are periodic over 3 out-rows per 5 in-rows, 32 blocks. The +2 then
+ * divide-by-5 is round-to-nearest, matching cv2.resize INTER_AREA. */
+static void resize_v_160_to_96(const uint8_t *in, uint8_t *out) {
+  for (int k = 0; k < 32; k++) {
+    const uint8_t *i0=in+(5*k+0)*IMG_W, *i1=in+(5*k+1)*IMG_W, *i2=in+(5*k+2)*IMG_W;
+    const uint8_t *i3=in+(5*k+3)*IMG_W, *i4=in+(5*k+4)*IMG_W;
+    uint8_t *o0=out+(3*k+0)*IMG_W, *o1=out+(3*k+1)*IMG_W, *o2=out+(3*k+2)*IMG_W;
+    for (int c = 0; c < IMG_W; c++) {
+      o0[c] = (uint8_t)((3*i0[c] + 2*i1[c]           + 2) / 5);
+      o1[c] = (uint8_t)((1*i1[c] + 3*i2[c] + 1*i3[c] + 2) / 5);
+      o2[c] = (uint8_t)((2*i3[c] + 3*i4[c]           + 2) / 5);
     }
-
-    camera_started = true;
-
-#ifdef NETWORK_ONBOARD_INFERENCE
-    inference_args = (inference_args_t){
-        .stm32_timestamp = latest_state.timestamp,
-        .camera_frame = camera_frame,
-        .frame_done = co_event_init(&frame_done)
-    };
-    co_fn_push_start(&inference_ctx, inference_task, &inference_args, co_event_init(&inference_done));
-#endif
-
-    streamer_send_frame_async(
-        &streamer,
-        camera_frame,
-        &latest_state, state_timestamp,
-        &latest_tof, tof_timestamp,
-        &latest_inference,
-        co_event_init(&streamer_tx_done)
-    );
-    CO_WAIT(&streamer_tx_done);
-
-#ifdef NETWORK_ONBOARD_INFERENCE
-    CO_WAIT(&frame_done);
-#endif
-}
-CO_FN_END()
-
-CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
-{
-    static PI_FC_L1 frame_t *camera_frame;
-    static PI_FC_L1 pi_task_t *frame_done;
-    static PI_FC_L1 co_event_t network_done;
-    static PI_FC_L1 float network_output[NETWORK_OUTPUT_COUNT];
-
-    camera_frame = inference_args->camera_frame;
-    frame_done = inference_args->frame_done;
-
-    trace_set(TRACE_USER_0, true);
-    network_run_async(camera_frame->buffer, l2_buffer, l2_buffer, l2_buffer_size, 0, &cluster, frame_done, co_event_init(&network_done));
-    CO_WAIT(&network_done);
-    
-    network_dequantize_output(l2_buffer, network_output);
-    trace_set(TRACE_USER_0, false);
-
-    latest_inference = (inference_stamped_msg_t) {
-        .stm32_timestamp = inference_args->stm32_timestamp,
-        .x = network_output[0],
-        .y = network_output[1],
-        .z = network_output[2],
-        .phi = network_output[3],
-    };
-
-    uart_protocol_send_inference_async(&uart_protocol, &latest_inference, co_event_init(&network_done));
-    CO_WAIT(&network_done);
-}
-CO_FN_END()
-
-CO_FN_DECLARE(streamer_rx_task);
-
-static void streamer_rx_start() {
-    co_fn_push_start(&streamer_rx_ctx, streamer_rx_task, NULL, NULL);
+  }
 }
 
-CO_FN_BEGIN(streamer_rx_task, void *, arg)
-{
-    static PI_L2    offboard_buffer_t offboard_buffer;
-    static PI_FC_L1 streamer_buffer_t offboard_buffer_rx;
-    static PI_FC_L1 co_event_t done_task;
+/* Camera: lib/camera/himax driver, blocking, HALF 162x162 per config.h. */
+static himax_t himax;
 
-    while (true) {
-        streamer_buffer_init(&offboard_buffer_rx, &offboard_buffer, sizeof(offboard_buffer));
-        streamer_receive_buffer_async(&streamer, &offboard_buffer_rx, co_event_init(&done_task));
-        CO_WAIT(&done_task);
+static int camera_start_blocking(void) {
+  if (himax_init(&himax) != 0) return -1;   // open camera device and MCLK timer
+  himax_configure(&himax);                  // registers from config.h
+  // Do not leave streaming on. Toggle start/stop per capture so the camera uDMA
+  // is idle during network_run.
+  return 0;
+}
 
-        if (offboard_buffer_rx.type != STREAMER_TYPE_INFERENCE) {
-            printf("discarded streamer buffer type %d (expected %d)\n", offboard_buffer_rx.type, STREAMER_TYPE_INFERENCE);
-            continue;
-        }
+/* One blocking capture into buf. Streaming is started for the capture and
+ * stopped right after so the camera DMA does not run during inference. */
+static void camera_capture_blocking(uint8_t *buf, size_t buf_size) {
+  frame_t frame = { .buffer = buf, .buffer_size = buf_size };  // other fields unused
+  pi_task_t done;
+  // Arm the capture before starting the stream, per lib/camera.c. Starting first
+  // with no buffer armed corrupts the CPI uDMA state.
+  himax_capture_async(&himax, &frame, pi_task_block(&done));
+  himax_start(&himax);
+  pi_task_wait_on(&done);
+  himax_stop(&himax);
+}
 
-#ifndef NETWORK_ONBOARD_INFERENCE
-        if (offboard_buffer.inference_stamped.stm32_timestamp != 0) {
-            uart_protocol_send_inference_async(&uart_protocol, &offboard_buffer.inference_stamped, co_event_init(&done_task));
-            CO_WAIT(&done_task);
-        }
+/* Crop raw 162-wide sensor frame to 160x160, mirroring lib/camera.c. */
+static void camera_crop_to_160(const uint8_t *raw, uint8_t *out160) {
+  const int cap_w = CAMERA_CAPTURE_WIDTH;
+  for (int r = 0; r < CAMERA_CROP_HEIGHT; r++) {
+    const uint8_t *src = raw + (CAMERA_CROP_TOP + r) * cap_w + CAMERA_CROP_LEFT;
+    memcpy(out160 + r * CAMERA_CROP_WIDTH, src, CAMERA_CROP_WIDTH);
+  }
+}
+
+/* UART to STM32. */
+static struct pi_device uart;
+
+static int uart_open(void) {
+  struct pi_uart_conf conf;
+  pi_uart_conf_init(&conf);
+  conf.baudrate_bps = 115200;               // match the STM32 side
+  conf.enable_tx = 1;
+  conf.enable_rx = 1;
+  pi_open_from_conf(&uart, &conf);
+  return pi_uart_open(&uart);
+}
+
+static void gate8_send(const float *corners, uint32_t ts) {
+  static gate8_msg_t msg;
+  memcpy(msg.header, GATE8_MSG_HEADER, 4);
+  msg.p.stm32_timestamp = ts;
+  memcpy(msg.p.corner, corners, sizeof(msg.p.corner));
+  msg.checksum = crc32CalculateBuffer(&msg, sizeof(msg) - sizeof(msg.checksum));
+  pi_uart_write(&uart, &msg, sizeof(msg));  // blocking
+}
+
+void main_task(void *arg) {
+  printf("DBG: main_task start\n");
+  mem_init();                  printf("DBG: mem_init ok\n");
+  network_initialize();        printf("DBG: network_initialize ok\n");
+#if GATE8_CAM_MODE <= 1
+  if (camera_start_blocking()) { printf("ERROR: camera init failed\n"); pmsis_exit(-1); }
+  printf("DBG: camera init ok\n");
+#else
+  printf("DBG: camera SKIPPED, mode 2\n");
+#endif
+  if (uart_open())             { printf("ERROR: uart open failed\n");   pmsis_exit(-1); }
+  printf("DBG: uart ok\n");
+
+  void    *l2_buffer = pi_l2_malloc(L2_BUF_SIZE);                                  // net in/out and scratch
+  uint8_t *raw       = pi_l2_malloc(CAMERA_CAPTURE_WIDTH * CAMERA_CAPTURE_HEIGHT); // raw sensor frame
+  uint8_t *frame160  = pi_l2_malloc(IMG_W * IMG_H_CAM);                            // cropped 160x160
+  if (!l2_buffer || !raw || !frame160) { printf("ERROR: L2 alloc failed\n"); pmsis_exit(-1); }
+  printf("DBG: buffers ok, entering loop\n");
+
+  uint32_t n = 0;
+  while (1) {
+#if GATE8_CAM_MODE != 0
+    /* modes 1 and 2 feed a constant input, no capture. */
+    printf("DBG[%lu]: memset input, mode %d\n", n, GATE8_CAM_MODE);
+    memset(l2_buffer, 128, IMG_W * IMG_H_NET);
+#else
+    printf("DBG[%lu]: capturing\n", n);
+    /* capture raw sensor frame, then crop to 160x160 */
+    camera_capture_blocking(raw, CAMERA_CAPTURE_WIDTH * CAMERA_CAPTURE_HEIGHT);
+    camera_crop_to_160(raw, frame160);
+    printf("DBG[%lu]: captured+cropped raw0=%d\n", n, (int)raw[0]);
+
+    /* resize 160x160 to 96x160 into the net input region of l2_buffer */
+    resize_v_160_to_96(frame160, (uint8_t *)l2_buffer);
 #endif
 
-        streamer_stats_frame_completed(&streamer, &offboard_buffer.stats);
-    }
-}
-CO_FN_END()
+    /* inference. output aliases l2_buffer, initial_dir 1 */
+    network_run(l2_buffer, L2_BUF_SIZE, l2_buffer, 0, 1);
+    printf("DBG[%lu]: inferred\n", n);
 
-CO_FN_BEGIN(uart_callback, uart_msg_t *, message)
-{
-    if (memcmp(message->header, UART_STATE_MSG_HEADER, UART_HEADER_LENGTH) == 0) {
-        latest_state = message->state;
-        state_timestamp = message->recv_timestamp;
-    } else if (memcmp(message->header, UART_RNG_MSG_HEADER, UART_HEADER_LENGTH) == 0) {
-        rng_push_entropy(message->rng.entropy);
-    } else if (memcmp(message->header, UART_TOF_MSG_HEADER, UART_HEADER_LENGTH) == 0) {
-        latest_tof = message->tof;
-        tof_timestamp = message->recv_timestamp;
-    }
-}
-CO_FN_END()
+    /* dequant int32 to corners, normalized image coords */
+    const int32_t *out = (const int32_t *)l2_buffer;
+    float corners[N_CORNERS];
+    for (int i = 0; i < N_CORNERS; i++)
+      corners[i] = out[i] * GATE8_EPS + GATE8_BIAS[i];
+    printf("DBG[%lu]: corners %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n", n,
+           corners[0], corners[1], corners[2], corners[3],
+           corners[4], corners[5], corners[6], corners[7]);
 
-static void main_task(void) {
-    soc_init();
-
-    uart_init(&uart);
-    uart_protocol_init(&uart_protocol, &uart, uart_callback);
-    
-    camera_init(&camera, camera_callback);
-    
-    cpx_init(&cpx);
-
-    streamer_init(&streamer, &camera, &cpx);
-    streamer_alloc_frames(&streamer, &camera);
-
-    cluster_init(&cluster);
-
-#ifdef NETWORK_ONBOARD_INFERENCE
-    mem_init();
-    network_init();
-    
-    memory_dump(&cluster);
-
-    ram = get_ram_ptr();
-    test_input_l3 = ram_malloc(NETWORK_INPUT_SIZE);
-    load_file_to_ram(test_input_l3, "inputs.hex");
-
-    l2_buffer_size = NETWORK_L2_BUFFER_SIZE;
-    l2_buffer = pi_l2_malloc(l2_buffer_size);
-    VERBOSE_PRINT("Network:\t\t\t%s, %dB @ L2, 0x%08x\n", l2_buffer?"OK":"Failed", l2_buffer_size, l2_buffer);
-    if (!l2_buffer) {
-        pmsis_exit(-1);
-    }
-#endif
-
-    memory_dump(&cluster);
-
-    // Needs to be done last when using UART TX as a trace GPIO, to override
-    // the UART configuration which happens somewhere in the SDK.
-    trace_init();
-
-    VERBOSE_PRINT("\n\t *** Initialization done ***\n\n");
-
-    uart_protocol_start(&uart_protocol);
-    camera_start(&camera);
-    cpx_start(&cpx);
-
-    streamer_rx_start();
-
-    while (true) {
-        pi_yield();
-    }
-
-    pmsis_exit(0);
+    /* send to STM32, ts 0 in v1 */
+    gate8_send(corners, 0);
+    printf("DBG[%lu]: sent %d bytes\n", n, (int)sizeof(gate8_msg_t));
+    n++;
+  }
 }
 
 int main(void) {
-    VERBOSE_PRINT("\n\n\t *** PMSIS Kickoff ***\n\n");
+  PMU_set_voltage(1200, 0);
+  pi_freq_set(PI_FREQ_DOMAIN_FC, 240000000);
+  pi_freq_set(PI_FREQ_DOMAIN_CL, 175000000);
 
-    return pmsis_kickoff((void *)main_task);
+  return pmsis_kickoff((void *)main_task);
 }

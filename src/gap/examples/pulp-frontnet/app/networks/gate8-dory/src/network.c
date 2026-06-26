@@ -37,7 +37,11 @@
 #define ICACHE_CTRL_UNIT 0x10201400
 #define ICACHE_PREFETCH ICACHE_CTRL_UNIT + 0x1C
 
-#define VERBOSE 1
+/* VERBOSE disabled for deployment. It ran DORY's per-layer golden checksum
+ * checks and printf every layer; on a live camera frame those checks always
+ * mismatch, and the printf volume stalls JTAG and would pollute the gate8 UART.
+ * Inference math is unaffected. Proper fix: regen with --verbose_level Perf_final. */
+// #define VERBOSE 1
 
 #define L3_WEIGHTS_SIZE 4000000
 #define L3_INPUT_SIZE 1500000
@@ -46,12 +50,30 @@ static void *L3_weights = NULL;
 static void *L3_input = NULL;
 static void *L3_output = NULL;
 int cycle_network_execution;
+
+/* Persistent cluster: opened once in network_initialize, before any camera
+ * activity, and reused by every network_run. Per-call open/close hangs when a
+ * camera capture happened just before. */
+static struct pi_device s_cluster_dev = {0};
+static int s_cluster_open = 0;
+
 /* Moves the weights and the biases from hyperflash to hyperram */
 void network_initialize() {
 
   L3_weights = ram_malloc(L3_WEIGHTS_SIZE);
   L3_input = ram_malloc(L3_INPUT_SIZE);
   L3_output = ram_malloc(L3_OUTPUT_SIZE);
+
+  // Open the cluster once, before the camera is ever started.
+  struct pi_cluster_conf _conf;
+  pi_cluster_conf_init(&_conf);
+  _conf.id = 0;
+  pi_open_from_conf(&s_cluster_dev, &_conf);
+  if (pi_cluster_open(&s_cluster_dev)) {
+    printf("ERROR: cluster open failed\n");
+    pmsis_exit(-1);
+  }
+  s_cluster_open = 1;
 
 #ifdef VERBOSE
   printf("\nL3 Buffer alloc initial\t@ %d:\t%s\n", (unsigned int)L3_weights, L3_weights?"Ok":"Failed");
@@ -114,35 +136,26 @@ void execute_layer_fork(void *args) {
 
 struct network_run_token network_run_async(void *l2_buffer, size_t l2_buffer_size, void *l2_final_output, int exec, int initial_dir)
 {
-  struct pi_device cluster_dev = {0};
-  struct pi_cluster_conf conf;
   struct pi_cluster_task cluster_task = {0};
-  // First open the cluster
-  pi_cluster_conf_init(&conf);
-  conf.id=0;
-  unsigned int args[4];
+  unsigned int args[5];
   args[0] = (unsigned int) l2_buffer;
   args[1] = (unsigned int) l2_buffer_size;
   args[2] = (unsigned int) l2_final_output;
   args[3] = (unsigned int) exec;
   args[4] = (unsigned int) initial_dir;
-  // open cluster...
+  // Reuse the cluster opened once in network_initialize.
   pi_cluster_task(&cluster_task, network_run_cluster, args);
-  pi_open_from_conf(&cluster_dev, &conf);
-  if (pi_cluster_open(&cluster_dev))
-    return;
-  // Then offload an entry point, this will get executed on the cluster controller
   cluster_task.stack_size = 3800;
   cluster_task.slave_stack_size = 3600;
-  pi_cluster_send_task_to_cl(&cluster_dev, &cluster_task);
+  pi_cluster_send_task_to_cl(&s_cluster_dev, &cluster_task);
   return (struct network_run_token) {
-    .cluster_dev = cluster_dev
+    .cluster_dev = s_cluster_dev
   };
 }
 
 void network_run_wait(struct network_run_token token)
 {
-  pi_cluster_close(&token.cluster_dev);
+  (void) token;  // cluster stays open for reuse
   print_perf("Final", cycle_network_execution, 14146560);
 }
 
