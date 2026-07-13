@@ -31,6 +31,9 @@
 #include "time.h"
 #include "trace.h"
 #include "uart.h"
+#include "uart_protocol.h"    // state_msg_t / tof_msg_t / inference_stamped_msg_t
+#include "cpx/cpx.h"          // CPX transport for the WiFi streamer
+#include "streamer.h"         // camera-frame WiFi streamer (for host corner viewer)
 #include "mem.h"
 #include "network.h"          // gate8-async API, network_run_async_cl
 
@@ -75,6 +78,18 @@ static void       *l2_buffer;   // net input, scratch and output
 static size_t      l2_buffer_size;
 static PI_L2 gate8_msg_t latest_msg;
 
+// WiFi image streamer (for tools/gate8_corner_viewer.py). Runs alongside the onboard
+// gate8 inference: the STM32 still gets corners over UART; the streamer only ships the
+// raw camera frame over CPX so the host can re-run the net and overlay corners. The
+// state/tof/inference metadata is unused here (no STM32->GAP8 link in this app), so it
+// is left zeroed -- the host viewer recomputes corners from the image.
+static cpx_t      cpx;
+static streamer_t streamer;
+static PI_FC_L1 state_msg_t latest_state;              // zeroed (no incoming state)
+static PI_FC_L1 tof_msg_t   latest_tof;                // zeroed (no incoming tof)
+static PI_L2 inference_stamped_msg_t latest_inference; // zeroed (corners done host-side)
+static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
+
 typedef struct { uint32_t stm32_timestamp; } inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
@@ -105,18 +120,31 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
   static PI_FC_L1 co_event_t inference_done;
+  static PI_FC_L1 co_event_t streamer_tx_done;
 
   if (started) {
     while (!co_event_is_done(&inference_done)) {
       CO_WAIT(&inference_done);
     }
+    while (!co_event_is_done(&streamer_tx_done)) {
+      CO_WAIT(&streamer_tx_done);
+    }
   }
   started = true;
 
+  // Resize copies the frame into l2_buffer first, so inference (on l2_buffer) and the
+  // streamer (on the original camera_frame) read disjoint buffers -- no conflict.
   resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
 
   iargs.stm32_timestamp = 0;
   co_fn_push_start(&inference_ctx, inference_task, &iargs, co_event_init(&inference_done));
+
+  // Ship the full 160x160 frame over WiFi. Wait for completion before returning so the
+  // frame isn't recycled mid-send (metadata is unused -> zeroed statics).
+  streamer_send_frame_async(&streamer, camera_frame,
+                            &latest_state, 0, &latest_tof, 0, &latest_inference,
+                            co_event_init(&streamer_tx_done));
+  CO_WAIT(&streamer_tx_done);
 }
 CO_FN_END()
 
@@ -153,11 +181,45 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
 }
 CO_FN_END()
 
+// Drain inbound streamer buffers (the viewer's per-frame replies), so CPX buffers
+// don't fill and stall the stream. In onboard-inference mode the offboard-inference
+// relay is compiled out; we just receive and mark the frame completed for RTT stats.
+CO_FN_DECLARE(streamer_rx_task);
+
+static void streamer_rx_start(void) {
+  co_fn_push_start(&streamer_rx_ctx, streamer_rx_task, NULL, NULL);
+}
+
+CO_FN_BEGIN(streamer_rx_task, void *, arg)
+{
+  static PI_L2    offboard_buffer_t offboard_buffer;
+  static PI_FC_L1 streamer_buffer_t offboard_buffer_rx;
+  static PI_FC_L1 co_event_t done_task;
+
+  while (true) {
+    streamer_buffer_init(&offboard_buffer_rx, &offboard_buffer, sizeof(offboard_buffer));
+    streamer_receive_buffer_async(&streamer, &offboard_buffer_rx, co_event_init(&done_task));
+    CO_WAIT(&done_task);
+
+    if (offboard_buffer_rx.type != STREAMER_TYPE_INFERENCE) {
+      continue;
+    }
+    streamer_stats_frame_completed(&streamer, &offboard_buffer.stats);
+  }
+}
+CO_FN_END()
+
 static void main_task(void) {
   soc_init();
   uart_init(&uart);
   camera_init(&camera, camera_callback);
-  camera_init_frames_alloc(&camera);
+
+  // Streamer owns the camera frame buffers (so it can hold one while sending), so use
+  // streamer_alloc_frames instead of camera_init_frames_alloc.
+  cpx_init(&cpx);
+  streamer_init(&streamer, &camera, &cpx);
+  streamer_alloc_frames(&streamer, &camera);
+
   cluster_init(&cluster);
 
   mem_init();
@@ -172,9 +234,11 @@ static void main_task(void) {
 
   trace_init();
 #if GATE8_DEBUG_PRINT
-  printf("gate8 deploy: init done, starting camera\n");
+  printf("gate8 deploy+stream: init done, starting camera\n");
 #endif
   camera_start(&camera);
+  cpx_start(&cpx);
+  streamer_rx_start();
 
   while (true) {
     pi_yield();
