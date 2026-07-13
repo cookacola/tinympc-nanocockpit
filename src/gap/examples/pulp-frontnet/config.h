@@ -43,11 +43,8 @@
 // Enable streamer debug prints
 // #define STREAMER_VERBOSE
 
-// Switch between onboard and offboard inference.
-// Disabled for the streaming (old_main.c) build: the host viewer
-// (tools/gate8_corner_viewer.py) runs the gate8 net, so the GAP8 only needs to
-// stream images. Re-enable for onboard inference builds.
-// #define NETWORK_ONBOARD_INFERENCE
+// Switch between onboard and offboard inference
+#define NETWORK_ONBOARD_INFERENCE
 
 // Disable network debug prints
 #define NETWORK_VERBOSE (0)
