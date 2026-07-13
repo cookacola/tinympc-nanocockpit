@@ -27,7 +27,9 @@ APP_CFLAGS  += -Werror
 APP_CFLAGS  += -g -O2 -fno-indirect-inlining -flto
 APP_LDFLAGS += -g -Wl,--print-memory-usage -flto
 
-APP_SRCS += main.c
+# main.c        = UART-corners deploy build (feeds the STM32, no WiFi stream)
+# old_main.c    = WiFi image streamer (for tools/gate8_corner_viewer.py host overlay)
+APP_SRCS += old_main.c
 APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/streamer.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
 APP_SRCS += ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c
 APP_SRCS += ../../lib/uart.c ../../lib/uart_protocol.c
