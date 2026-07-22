@@ -84,20 +84,20 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_SECTORS          FLOW_OBS_SECT_MAX
 #define FLOW_HALF_W           (IMG_W / 2)
 #define FLOW_HALF_H           (IMG_H_CAM / 2)
-#define FLOW_MAX_FEATURES     96
-#define FLOW_FEATURE_STEP     4
+#define FLOW_MAX_FEATURES     48
+#define FLOW_FEATURE_STEP     6
 #define FLOW_FEATURE_BORDER   10
 #define FLOW_MIN_FEATURE_DIST 8
 #define FLOW_ST_SCORE_THRESH  1200.0f
 #define FLOW_LK_WIN_R         3
-#define FLOW_LK_ITERS         4
+#define FLOW_LK_ITERS         3
 #define FLOW_LK_ERR_THRESH    18.0f
 #define FLOW_MIN_SAMPLES      3
 #define FLOW_FX_PX            140.0f
 #define FLOW_ASSUMED_VX_MPS   0.20f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_INV_DEPTH    8.0f
-#define FLOW_SEND_PERIOD_US   100000u
+#define FLOW_SEND_PERIOD_US   200000u
 
 typedef struct {
   float x;
@@ -421,8 +421,12 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
   static PI_FC_L1 co_event_t flow_send_done;
   static PI_FC_L1 uint32_t last_flow_send_us = 0;
 
+  if (flow_have_prev && camera_frame->frame_timestamp - last_flow_send_us < FLOW_SEND_PERIOD_US) {
+    CO_RETURN();
+  }
+
   flow_compute_camera_payload(camera_frame, &flow_camera_payload);
-  if (flow_camera_payload.gap8_ts_us - last_flow_send_us >= FLOW_SEND_PERIOD_US) {
+  if (flow_have_prev) {
     last_flow_send_us = flow_camera_payload.gap8_ts_us;
     flow_obstacle_send_async(&uart, &flow_camera_payload, co_event_init(&flow_send_done));
     CO_WAIT(&flow_send_done);
