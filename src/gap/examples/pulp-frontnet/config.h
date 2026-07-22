@@ -65,7 +65,7 @@
 
 // Flow receiver isolation test: send only synthetic obstacle-flow sector frames.
 // This skips camera capture and the gate8 network entirely.
-// #define FLOW_OBSTACLE_TEST_ONLY
+#define FLOW_OBSTACLE_TEST_ONLY
 
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)
