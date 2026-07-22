@@ -61,7 +61,7 @@
 // Emit synthetic obstacle-flow sector frames over the same UART used by gate8.
 // This validates the STM32 receiver and log-only half-space synthesis before the
 // full GAP8 sparse-LK frontend is enabled.
-#define FLOW_OBSTACLE_TEST_UART
+// #define FLOW_OBSTACLE_TEST_UART
 
 // Flow receiver isolation test: send only synthetic obstacle-flow sector frames.
 // This skips camera capture and the gate8 network entirely.
