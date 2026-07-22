@@ -106,11 +106,15 @@ typedef struct {
 } flow_feature_t;
 
 static PI_L2 uint8_t flow_prev_frame[IMG_W * IMG_H_CAM];
+static PI_L2 uint8_t flow_cur_frame[IMG_W * IMG_H_CAM];
 static PI_L2 uint8_t flow_prev_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 uint8_t flow_cur_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 flow_feature_t flow_features[FLOW_MAX_FEATURES];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
 static PI_FC_L1 bool flow_have_prev = false;
+static volatile bool flow_snapshot_pending = false;
+static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
+static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
 
 static inline float f_abs(float v) {
@@ -296,19 +300,20 @@ static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
   return lk_track_level(prev, cur, IMG_W, IMG_H_CAM, x, y, nx, ny, err);
 }
 
-static void flow_compute_camera_payload(const frame_t *camera_frame,
+static void flow_compute_camera_payload(const uint8_t *cur,
+                                        uint32_t frame_timestamp,
                                         flow_obstacle_payload_t *payload) {
   static PI_FC_L1 float flow_sum[FLOW_SECTORS];
   static PI_FC_L1 int flow_count[FLOW_SECTORS];
 
   memset(payload, 0, sizeof(*payload));
-  payload->gap8_ts_us = camera_frame->frame_timestamp;
+  payload->gap8_ts_us = frame_timestamp;
   payload->dt_s = FLOW_MIN_DT_S;
   payload->n_sectors = FLOW_SECTORS;
   payload->flags = 0;
 
-  if (flow_have_prev && camera_frame->frame_timestamp > flow_prev_ts_us) {
-    payload->dt_s = (camera_frame->frame_timestamp - flow_prev_ts_us) * 1.0e-6f;
+  if (flow_have_prev && frame_timestamp > flow_prev_ts_us) {
+    payload->dt_s = (frame_timestamp - flow_prev_ts_us) * 1.0e-6f;
     if (payload->dt_s < FLOW_MIN_DT_S) {
       payload->dt_s = FLOW_MIN_DT_S;
     }
@@ -316,7 +321,6 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
     memset(flow_sum, 0, sizeof(flow_sum));
     memset(flow_count, 0, sizeof(flow_count));
 
-    const uint8_t *cur = camera_frame->buffer;
     build_half_pyramid(cur, flow_cur_half);
     int n_features = select_shi_tomasi_features(flow_prev_frame, flow_features);
     for (int k = 0; k < n_features; k++) {
@@ -366,10 +370,39 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
     }
   }
 
-  memcpy(flow_prev_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
+  memcpy(flow_prev_frame, cur, IMG_W * IMG_H_CAM);
   build_half_pyramid(flow_prev_frame, flow_prev_half);
-  flow_prev_ts_us = camera_frame->frame_timestamp;
+  flow_prev_ts_us = frame_timestamp;
   flow_have_prev = true;
+}
+
+static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
+  if (flow_snapshot_pending ||
+      camera_frame->frame_timestamp - flow_last_snapshot_us < FLOW_SEND_PERIOD_US) {
+    return;
+  }
+
+  memcpy(flow_cur_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
+  flow_snapshot_ts_us = camera_frame->frame_timestamp;
+  flow_last_snapshot_us = camera_frame->frame_timestamp;
+  flow_snapshot_pending = true;
+}
+
+static void flow_background_poll(void) {
+  static pi_task_t done_task;
+
+  if (!flow_snapshot_pending) {
+    return;
+  }
+
+  bool had_prev = flow_have_prev;
+  flow_compute_camera_payload(flow_cur_frame, flow_snapshot_ts_us, &flow_camera_payload);
+  flow_snapshot_pending = false;
+
+  if (had_prev) {
+    flow_obstacle_send_async(&uart, &flow_camera_payload, pi_task_block(&done_task));
+    pi_task_wait_on(&done_task);
+  }
 }
 
 #endif
@@ -418,19 +451,7 @@ CO_FN_DECLARE(inference_task);
 CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
 #ifdef FLOW_OBSTACLE_CAMERA_TEST
-  static PI_FC_L1 co_event_t flow_send_done;
-  static PI_FC_L1 uint32_t last_flow_send_us = 0;
-
-  if (flow_have_prev && camera_frame->frame_timestamp - last_flow_send_us < FLOW_SEND_PERIOD_US) {
-    CO_RETURN();
-  }
-
-  flow_compute_camera_payload(camera_frame, &flow_camera_payload);
-  if (flow_have_prev) {
-    last_flow_send_us = flow_camera_payload.gap8_ts_us;
-    flow_obstacle_send_async(&uart, &flow_camera_payload, co_event_init(&flow_send_done));
-    CO_WAIT(&flow_send_done);
-  }
+  flow_snapshot_frame_from_callback(camera_frame);
 #else
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
@@ -529,6 +550,9 @@ static void main_task(void) {
   camera_start(&camera);
 
   while (true) {
+#ifdef FLOW_OBSTACLE_CAMERA_TEST
+    flow_background_poll();
+#endif
     pi_yield();
   }
 #endif
