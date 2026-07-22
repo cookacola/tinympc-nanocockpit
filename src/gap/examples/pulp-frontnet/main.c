@@ -90,12 +90,12 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_ASSUMED_VX_MPS   0.20f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_INV_DEPTH    8.0f
+#define FLOW_SEND_PERIOD_US   100000u
 
 static PI_L2 uint8_t flow_prev_frame[IMG_W * IMG_H_CAM];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
 static PI_FC_L1 bool flow_have_prev = false;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
-static PI_FC_L1 uint32_t flow_frame_count = 0;
 
 static inline int iabs_int(int v) {
   return v < 0 ? -v : v;
@@ -203,21 +203,6 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
   flow_have_prev = true;
 }
 
-static void flow_print_camera_payload(const flow_obstacle_payload_t *payload) {
-  if ((flow_frame_count++ % 10) != 0) {
-    return;
-  }
-
-  printf("flowCam dt=%.3f invDepth:", payload->dt_s);
-  for (int i = 0; i < payload->n_sectors; i++) {
-    printf(" %.2f", payload->sector[i].inv_depth);
-  }
-  printf(" conf:");
-  for (int i = 0; i < payload->n_sectors; i++) {
-    printf(" %.2f", payload->sector[i].confidence);
-  }
-  printf("\n");
-}
 #endif
 
 #ifdef FLOW_OBSTACLE_TEST_ONLY
@@ -265,11 +250,14 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
 #ifdef FLOW_OBSTACLE_CAMERA_TEST
   static PI_FC_L1 co_event_t flow_send_done;
+  static PI_FC_L1 uint32_t last_flow_send_us = 0;
 
   flow_compute_camera_payload(camera_frame, &flow_camera_payload);
-  flow_obstacle_send_async(&uart, &flow_camera_payload, co_event_init(&flow_send_done));
-  CO_WAIT(&flow_send_done);
-  flow_print_camera_payload(&flow_camera_payload);
+  if (flow_camera_payload.gap8_ts_us - last_flow_send_us >= FLOW_SEND_PERIOD_US) {
+    last_flow_send_us = flow_camera_payload.gap8_ts_us;
+    flow_obstacle_send_async(&uart, &flow_camera_payload, co_event_init(&flow_send_done));
+    CO_WAIT(&flow_send_done);
+  }
 #else
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
@@ -363,6 +351,7 @@ static void main_task(void) {
   trace_init();
   printf("flow camera test: move laterally by hand in front of a textured obstacle\n");
   printf("flow camera test: metric depth assumes VX=%.2fm/s, so use relative trends first\n", FLOW_ASSUMED_VX_MPS);
+  printf("flow camera test: sector values print from STM32 cfclient console\n");
 #endif
   camera_start(&camera);
 
