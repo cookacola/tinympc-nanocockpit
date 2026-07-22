@@ -92,12 +92,15 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_LK_WIN_R         3
 #define FLOW_LK_ITERS         3
 #define FLOW_LK_ERR_THRESH    18.0f
-#define FLOW_MIN_SAMPLES      3
+#define FLOW_MIN_SAMPLES      2
 #define FLOW_FX_PX            140.0f
 #define FLOW_ASSUMED_VX_MPS   0.20f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_INV_DEPTH    8.0f
 #define FLOW_SEND_PERIOD_US   200000u
+#define FLOW_SMOOTH_ALPHA     0.35f
+#define FLOW_HOLD_UPDATES     3
+#define FLOW_HOLD_CONF_DECAY  0.60f
 
 typedef struct {
   float x;
@@ -116,6 +119,11 @@ static volatile bool flow_snapshot_pending = false;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
 static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
+static PI_FC_L1 float flow_smooth_inv[FLOW_SECTORS];
+static PI_FC_L1 float flow_smooth_conf[FLOW_SECTORS];
+static PI_FC_L1 float flow_smooth_ttc[FLOW_SECTORS];
+static PI_FC_L1 uint8_t flow_hold_count[FLOW_SECTORS];
+static PI_FC_L1 bool flow_filter_initialized = false;
 
 static inline float f_abs(float v) {
   return v < 0.0f ? -v : v;
@@ -300,6 +308,51 @@ static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
   return lk_track_level(prev, cur, IMG_W, IMG_H_CAM, x, y, nx, ny, err);
 }
 
+static void flow_filter_payload(flow_obstacle_payload_t *payload) {
+  if (!flow_filter_initialized) {
+    memset(flow_smooth_inv, 0, sizeof(flow_smooth_inv));
+    memset(flow_smooth_conf, 0, sizeof(flow_smooth_conf));
+    for (int i = 0; i < FLOW_SECTORS; i++) {
+      flow_smooth_ttc[i] = 99.0f;
+      flow_hold_count[i] = 0;
+    }
+    flow_filter_initialized = true;
+  }
+
+  for (int i = 0; i < FLOW_SECTORS; i++) {
+    const bool valid = payload->sector[i].confidence > 0.0f;
+    if (valid) {
+      if (flow_smooth_conf[i] <= 0.0f) {
+        flow_smooth_inv[i] = payload->sector[i].inv_depth;
+        flow_smooth_conf[i] = payload->sector[i].confidence;
+        flow_smooth_ttc[i] = payload->sector[i].ttc_s;
+      } else {
+        flow_smooth_inv[i] =
+          FLOW_SMOOTH_ALPHA * payload->sector[i].inv_depth +
+          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_inv[i];
+        flow_smooth_conf[i] =
+          FLOW_SMOOTH_ALPHA * payload->sector[i].confidence +
+          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_conf[i];
+        flow_smooth_ttc[i] =
+          FLOW_SMOOTH_ALPHA * payload->sector[i].ttc_s +
+          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_ttc[i];
+      }
+      flow_hold_count[i] = FLOW_HOLD_UPDATES;
+    } else if (flow_hold_count[i] > 0) {
+      flow_hold_count[i]--;
+      flow_smooth_conf[i] *= FLOW_HOLD_CONF_DECAY;
+    } else {
+      flow_smooth_inv[i] = 0.0f;
+      flow_smooth_conf[i] = 0.0f;
+      flow_smooth_ttc[i] = 99.0f;
+    }
+
+    payload->sector[i].inv_depth = flow_smooth_inv[i];
+    payload->sector[i].ttc_s = flow_smooth_ttc[i];
+    payload->sector[i].confidence = flow_smooth_conf[i];
+  }
+}
+
 static void flow_compute_camera_payload(const uint8_t *cur,
                                         uint32_t frame_timestamp,
                                         flow_obstacle_payload_t *payload) {
@@ -311,6 +364,11 @@ static void flow_compute_camera_payload(const uint8_t *cur,
   payload->dt_s = FLOW_MIN_DT_S;
   payload->n_sectors = FLOW_SECTORS;
   payload->flags = 0;
+  for (int i = 0; i < FLOW_SECTORS; i++) {
+    const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
+    payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
+    payload->sector[i].ttc_s = 99.0f;
+  }
 
   if (flow_have_prev && frame_timestamp > flow_prev_ts_us) {
     payload->dt_s = (frame_timestamp - flow_prev_ts_us) * 1.0e-6f;
@@ -347,9 +405,6 @@ static void flow_compute_camera_payload(const uint8_t *cur,
 
     const float assumed_translation_m = FLOW_ASSUMED_VX_MPS * payload->dt_s;
     for (int i = 0; i < FLOW_SECTORS; i++) {
-      const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
-      payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
-
       if (flow_count[i] >= FLOW_MIN_SAMPLES && assumed_translation_m > 1.0e-5f) {
         float avg_flow_px = flow_sum[i] / (float)flow_count[i];
         float inv_depth = avg_flow_px / (FLOW_FX_PX * assumed_translation_m);
@@ -368,6 +423,8 @@ static void flow_compute_camera_payload(const uint8_t *cur,
         payload->sector[i].confidence = 0.0f;
       }
     }
+
+    flow_filter_payload(payload);
   }
 
   memcpy(flow_prev_frame, cur, IMG_W * IMG_H_CAM);
