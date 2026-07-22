@@ -93,7 +93,8 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_LK_ITERS         3
 #define FLOW_LK_ERR_THRESH    18.0f
 #define FLOW_MIN_SAMPLES      2
-#define FLOW_FX_PX            140.0f
+#define FLOW_FX_PX            89.15584f
+#define FLOW_CX_PX            81.10381f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_RAD_S        20.0f
 #define FLOW_SEND_PERIOD_US   200000u
@@ -365,7 +366,7 @@ static void flow_compute_camera_payload(const uint8_t *cur,
   payload->flags = 0;
   for (int i = 0; i < FLOW_SECTORS; i++) {
     const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
-    payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
+    payload->sector[i].azimuth_rad = (center_x - FLOW_CX_PX) / FLOW_FX_PX;
   }
 
   if (flow_have_prev && frame_timestamp > flow_prev_ts_us) {
