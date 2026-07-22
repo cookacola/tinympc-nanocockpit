@@ -40,6 +40,7 @@
 #include "crc32.h"
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #define IMG_W        160
 #define IMG_H_CAM    160          // cropped sensor frame from lib/camera
@@ -81,55 +82,223 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
 #ifdef FLOW_OBSTACLE_CAMERA_TEST
 #define FLOW_SECTORS          FLOW_OBS_SECT_MAX
-#define FLOW_BLOCK_R          2
-#define FLOW_SEARCH_R         4
-#define FLOW_STEP             8
-#define FLOW_MIN_TEXTURE      120
-#define FLOW_MIN_SAMPLES      4
+#define FLOW_HALF_W           (IMG_W / 2)
+#define FLOW_HALF_H           (IMG_H_CAM / 2)
+#define FLOW_MAX_FEATURES     96
+#define FLOW_FEATURE_STEP     4
+#define FLOW_FEATURE_BORDER   10
+#define FLOW_MIN_FEATURE_DIST 8
+#define FLOW_ST_SCORE_THRESH  1200.0f
+#define FLOW_LK_WIN_R         3
+#define FLOW_LK_ITERS         4
+#define FLOW_LK_ERR_THRESH    18.0f
+#define FLOW_MIN_SAMPLES      3
 #define FLOW_FX_PX            140.0f
 #define FLOW_ASSUMED_VX_MPS   0.20f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_INV_DEPTH    8.0f
 #define FLOW_SEND_PERIOD_US   100000u
 
+typedef struct {
+  float x;
+  float y;
+  float score;
+} flow_feature_t;
+
 static PI_L2 uint8_t flow_prev_frame[IMG_W * IMG_H_CAM];
+static PI_L2 uint8_t flow_prev_half[FLOW_HALF_W * FLOW_HALF_H];
+static PI_L2 uint8_t flow_cur_half[FLOW_HALF_W * FLOW_HALF_H];
+static PI_L2 flow_feature_t flow_features[FLOW_MAX_FEATURES];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
 static PI_FC_L1 bool flow_have_prev = false;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
 
-static inline int iabs_int(int v) {
-  return v < 0 ? -v : v;
+static inline float f_abs(float v) {
+  return v < 0.0f ? -v : v;
 }
 
-static int block_sad_5x5(const uint8_t *cur, const uint8_t *prev, int x, int y, int dx) {
-  int sad = 0;
-  for (int yy = -FLOW_BLOCK_R; yy <= FLOW_BLOCK_R; yy++) {
-    const uint8_t *c = cur + (y + yy) * IMG_W + x - FLOW_BLOCK_R;
-    const uint8_t *p = prev + (y + yy) * IMG_W + x + dx - FLOW_BLOCK_R;
-    for (int xx = 0; xx < (2 * FLOW_BLOCK_R + 1); xx++) {
-      sad += iabs_int((int)c[xx] - (int)p[xx]);
-    }
+static float bilinear_sample(const uint8_t *img, int w, int h, float x, float y) {
+  int xi = (int)x;
+  int yi = (int)y;
+  if (xi < 0 || yi < 0 || xi >= w - 1 || yi >= h - 1) {
+    return 0.0f;
   }
-  return sad;
+
+  float ax = x - (float)xi;
+  float ay = y - (float)yi;
+  float v00 = (float)img[yi * w + xi];
+  float v10 = (float)img[yi * w + xi + 1];
+  float v01 = (float)img[(yi + 1) * w + xi];
+  float v11 = (float)img[(yi + 1) * w + xi + 1];
+  return (1.0f - ax) * (1.0f - ay) * v00 +
+         ax * (1.0f - ay) * v10 +
+         (1.0f - ax) * ay * v01 +
+         ax * ay * v11;
 }
 
-static int block_texture_5x5(const uint8_t *img, int x, int y) {
-  int sum = 0;
-  int sum2 = 0;
-  for (int yy = -FLOW_BLOCK_R; yy <= FLOW_BLOCK_R; yy++) {
-    const uint8_t *row = img + (y + yy) * IMG_W + x - FLOW_BLOCK_R;
-    for (int xx = 0; xx < (2 * FLOW_BLOCK_R + 1); xx++) {
-      int v = row[xx];
-      sum += v;
-      sum2 += v * v;
+static void build_half_pyramid(const uint8_t *src, uint8_t *dst) {
+  for (int y = 0; y < FLOW_HALF_H; y++) {
+    for (int x = 0; x < FLOW_HALF_W; x++) {
+      int sx = x * 2;
+      int sy = y * 2;
+      int sum = src[sy * IMG_W + sx] +
+                src[sy * IMG_W + sx + 1] +
+                src[(sy + 1) * IMG_W + sx] +
+                src[(sy + 1) * IMG_W + sx + 1];
+      dst[y * FLOW_HALF_W + x] = (uint8_t)((sum + 2) / 4);
     }
   }
-  return sum2 - (sum * sum) / 25;
+}
+
+static float shi_tomasi_score(const uint8_t *img, int w, int x, int y) {
+  int sxx = 0;
+  int syy = 0;
+  int sxy = 0;
+
+  for (int yy = -2; yy <= 2; yy++) {
+    for (int xx = -2; xx <= 2; xx++) {
+      int p = (y + yy) * w + x + xx;
+      int gx = (int)img[p + 1] - (int)img[p - 1];
+      int gy = (int)img[p + w] - (int)img[p - w];
+      sxx += gx * gx;
+      syy += gy * gy;
+      sxy += gx * gy;
+    }
+  }
+
+  float trace = (float)(sxx + syy);
+  float diff = (float)(sxx - syy);
+  float sxyf = (float)sxy;
+  float disc = sqrtf(diff * diff + 4.0f * sxyf * sxyf);
+  return 0.5f * (trace - disc);
+}
+
+static bool feature_far_enough(const flow_feature_t *features, int n, float x, float y) {
+  for (int i = 0; i < n; i++) {
+    float dx = features[i].x - x;
+    float dy = features[i].y - y;
+    if (dx * dx + dy * dy < (float)(FLOW_MIN_FEATURE_DIST * FLOW_MIN_FEATURE_DIST)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static int select_shi_tomasi_features(const uint8_t *img, flow_feature_t *features) {
+  int n = 0;
+  for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER; y += FLOW_FEATURE_STEP) {
+    for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER; x += FLOW_FEATURE_STEP) {
+      float score = shi_tomasi_score(img, IMG_W, x, y);
+      if (score < FLOW_ST_SCORE_THRESH || !feature_far_enough(features, n, (float)x, (float)y)) {
+        continue;
+      }
+
+      int insert = n;
+      while (insert > 0 && features[insert - 1].score < score) {
+        if (insert < FLOW_MAX_FEATURES) {
+          features[insert] = features[insert - 1];
+        }
+        insert--;
+      }
+      if (insert < FLOW_MAX_FEATURES) {
+        features[insert].x = (float)x;
+        features[insert].y = (float)y;
+        features[insert].score = score;
+        if (n < FLOW_MAX_FEATURES) {
+          n++;
+        }
+      }
+    }
+  }
+  return n;
+}
+
+static bool lk_track_level(const uint8_t *prev, const uint8_t *cur,
+                           int w, int h, float px, float py,
+                           float *cx, float *cy, float *out_err) {
+  if (px < FLOW_LK_WIN_R + 1 || py < FLOW_LK_WIN_R + 1 ||
+      px >= w - FLOW_LK_WIN_R - 2 || py >= h - FLOW_LK_WIN_R - 2) {
+    return false;
+  }
+
+  for (int iter = 0; iter < FLOW_LK_ITERS; iter++) {
+    if (*cx < FLOW_LK_WIN_R + 1 || *cy < FLOW_LK_WIN_R + 1 ||
+        *cx >= w - FLOW_LK_WIN_R - 2 || *cy >= h - FLOW_LK_WIN_R - 2) {
+      return false;
+    }
+
+    float gxx = 0.0f;
+    float gyy = 0.0f;
+    float gxy = 0.0f;
+    float bx = 0.0f;
+    float by = 0.0f;
+    float err = 0.0f;
+    int samples = 0;
+
+    for (int yy = -FLOW_LK_WIN_R; yy <= FLOW_LK_WIN_R; yy++) {
+      for (int xx = -FLOW_LK_WIN_R; xx <= FLOW_LK_WIN_R; xx++) {
+        float qx = px + (float)xx;
+        float qy = py + (float)yy;
+        float rx = *cx + (float)xx;
+        float ry = *cy + (float)yy;
+        float i0 = bilinear_sample(prev, w, h, qx, qy);
+        float i1 = bilinear_sample(cur, w, h, rx, ry);
+        float ix = 0.5f * (bilinear_sample(prev, w, h, qx + 1.0f, qy) -
+                           bilinear_sample(prev, w, h, qx - 1.0f, qy));
+        float iy = 0.5f * (bilinear_sample(prev, w, h, qx, qy + 1.0f) -
+                           bilinear_sample(prev, w, h, qx, qy - 1.0f));
+        float it = i0 - i1;
+
+        gxx += ix * ix;
+        gyy += iy * iy;
+        gxy += ix * iy;
+        bx += ix * it;
+        by += iy * it;
+        err += f_abs(it);
+        samples++;
+      }
+    }
+
+    float det = gxx * gyy - gxy * gxy;
+    if (det < 1.0e-3f) {
+      return false;
+    }
+
+    float du = (gyy * bx - gxy * by) / det;
+    float dv = (gxx * by - gxy * bx) / det;
+    *cx += du;
+    *cy += dv;
+    *out_err = err / (float)samples;
+
+    if (du * du + dv * dv < 0.0025f) {
+      break;
+    }
+  }
+
+  return *out_err <= FLOW_LK_ERR_THRESH;
+}
+
+static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
+                             float x, float y, float *nx, float *ny,
+                             float *err) {
+  float px_half = x * 0.5f;
+  float py_half = y * 0.5f;
+  float cx_half = px_half;
+  float cy_half = py_half;
+
+  if (!lk_track_level(flow_prev_half, flow_cur_half, FLOW_HALF_W, FLOW_HALF_H,
+                      px_half, py_half, &cx_half, &cy_half, err)) {
+    return false;
+  }
+
+  *nx = x + 2.0f * (cx_half - px_half);
+  *ny = y + 2.0f * (cy_half - py_half);
+  return lk_track_level(prev, cur, IMG_W, IMG_H_CAM, x, y, nx, ny, err);
 }
 
 static void flow_compute_camera_payload(const frame_t *camera_frame,
                                         flow_obstacle_payload_t *payload) {
-  static PI_FC_L1 int flow_sum[FLOW_SECTORS];
+  static PI_FC_L1 float flow_sum[FLOW_SECTORS];
   static PI_FC_L1 int flow_count[FLOW_SECTORS];
 
   memset(payload, 0, sizeof(*payload));
@@ -148,29 +317,28 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
     memset(flow_count, 0, sizeof(flow_count));
 
     const uint8_t *cur = camera_frame->buffer;
-    for (int y = 24; y < IMG_H_CAM - 24; y += FLOW_STEP) {
-      for (int x = 12; x < IMG_W - 12; x += FLOW_STEP) {
-        if (block_texture_5x5(cur, x, y) < FLOW_MIN_TEXTURE) {
-          continue;
-        }
-
-        int best_dx = 0;
-        int best_sad = 0x7fffffff;
-        for (int dx = -FLOW_SEARCH_R; dx <= FLOW_SEARCH_R; dx++) {
-          int sad = block_sad_5x5(cur, flow_prev_frame, x, y, dx);
-          if (sad < best_sad) {
-            best_sad = sad;
-            best_dx = dx;
-          }
-        }
-
-        int sector = (x * FLOW_SECTORS) / IMG_W;
-        if (sector >= FLOW_SECTORS) {
-          sector = FLOW_SECTORS - 1;
-        }
-        flow_sum[sector] += iabs_int(best_dx);
-        flow_count[sector]++;
+    build_half_pyramid(cur, flow_cur_half);
+    int n_features = select_shi_tomasi_features(flow_prev_frame, flow_features);
+    for (int k = 0; k < n_features; k++) {
+      float nx = flow_features[k].x;
+      float ny = flow_features[k].y;
+      float err = 0.0f;
+      if (!lk_track_pyramid(flow_prev_frame, cur, flow_features[k].x, flow_features[k].y,
+                            &nx, &ny, &err)) {
+        continue;
       }
+
+      float dx = nx - flow_features[k].x;
+      if (f_abs(dx) < 0.05f) {
+        continue;
+      }
+
+      int sector = ((int)flow_features[k].x * FLOW_SECTORS) / IMG_W;
+      if (sector >= FLOW_SECTORS) {
+        sector = FLOW_SECTORS - 1;
+      }
+      flow_sum[sector] += f_abs(dx);
+      flow_count[sector]++;
     }
 
     const float assumed_translation_m = FLOW_ASSUMED_VX_MPS * payload->dt_s;
@@ -179,7 +347,7 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
       payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
 
       if (flow_count[i] >= FLOW_MIN_SAMPLES && assumed_translation_m > 1.0e-5f) {
-        float avg_flow_px = (float)flow_sum[i] / (float)flow_count[i];
+        float avg_flow_px = flow_sum[i] / (float)flow_count[i];
         float inv_depth = avg_flow_px / (FLOW_FX_PX * assumed_translation_m);
         if (inv_depth > FLOW_MAX_INV_DEPTH) {
           inv_depth = FLOW_MAX_INV_DEPTH;
@@ -199,6 +367,7 @@ static void flow_compute_camera_payload(const frame_t *camera_frame,
   }
 
   memcpy(flow_prev_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
+  build_half_pyramid(flow_prev_frame, flow_prev_half);
   flow_prev_ts_us = camera_frame->frame_timestamp;
   flow_have_prev = true;
 }
@@ -351,7 +520,7 @@ static void main_task(void) {
   trace_init();
   printf("flow camera test: move laterally by hand in front of a textured obstacle\n");
   printf("flow camera test: metric depth assumes VX=%.2fm/s, so use relative trends first\n", FLOW_ASSUMED_VX_MPS);
-  printf("flow camera test: sector values print from STM32 cfclient console\n");
+  printf("flow camera test: sector values are exposed as STM32 flowObsRx logs\n");
 #endif
   camera_start(&camera);
 
