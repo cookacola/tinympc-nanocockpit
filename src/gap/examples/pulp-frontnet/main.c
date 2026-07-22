@@ -79,6 +79,147 @@ static PI_L2 gate8_msg_t latest_msg;
 typedef struct { uint32_t stm32_timestamp; } inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
+#ifdef FLOW_OBSTACLE_CAMERA_TEST
+#define FLOW_SECTORS          FLOW_OBS_SECT_MAX
+#define FLOW_BLOCK_R          2
+#define FLOW_SEARCH_R         4
+#define FLOW_STEP             8
+#define FLOW_MIN_TEXTURE      120
+#define FLOW_MIN_SAMPLES      4
+#define FLOW_FX_PX            140.0f
+#define FLOW_ASSUMED_VX_MPS   0.20f
+#define FLOW_MIN_DT_S         0.005f
+#define FLOW_MAX_INV_DEPTH    8.0f
+
+static PI_L2 uint8_t flow_prev_frame[IMG_W * IMG_H_CAM];
+static PI_L2 flow_obstacle_payload_t flow_camera_payload;
+static PI_FC_L1 bool flow_have_prev = false;
+static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
+static PI_FC_L1 uint32_t flow_frame_count = 0;
+
+static inline int iabs_int(int v) {
+  return v < 0 ? -v : v;
+}
+
+static int block_sad_5x5(const uint8_t *cur, const uint8_t *prev, int x, int y, int dx) {
+  int sad = 0;
+  for (int yy = -FLOW_BLOCK_R; yy <= FLOW_BLOCK_R; yy++) {
+    const uint8_t *c = cur + (y + yy) * IMG_W + x - FLOW_BLOCK_R;
+    const uint8_t *p = prev + (y + yy) * IMG_W + x + dx - FLOW_BLOCK_R;
+    for (int xx = 0; xx < (2 * FLOW_BLOCK_R + 1); xx++) {
+      sad += iabs_int((int)c[xx] - (int)p[xx]);
+    }
+  }
+  return sad;
+}
+
+static int block_texture_5x5(const uint8_t *img, int x, int y) {
+  int sum = 0;
+  int sum2 = 0;
+  for (int yy = -FLOW_BLOCK_R; yy <= FLOW_BLOCK_R; yy++) {
+    const uint8_t *row = img + (y + yy) * IMG_W + x - FLOW_BLOCK_R;
+    for (int xx = 0; xx < (2 * FLOW_BLOCK_R + 1); xx++) {
+      int v = row[xx];
+      sum += v;
+      sum2 += v * v;
+    }
+  }
+  return sum2 - (sum * sum) / 25;
+}
+
+static void flow_compute_camera_payload(const frame_t *camera_frame,
+                                        flow_obstacle_payload_t *payload) {
+  static PI_FC_L1 int flow_sum[FLOW_SECTORS];
+  static PI_FC_L1 int flow_count[FLOW_SECTORS];
+
+  memset(payload, 0, sizeof(*payload));
+  payload->gap8_ts_us = camera_frame->frame_timestamp;
+  payload->dt_s = FLOW_MIN_DT_S;
+  payload->n_sectors = FLOW_SECTORS;
+  payload->flags = 0;
+
+  if (flow_have_prev && camera_frame->frame_timestamp > flow_prev_ts_us) {
+    payload->dt_s = (camera_frame->frame_timestamp - flow_prev_ts_us) * 1.0e-6f;
+    if (payload->dt_s < FLOW_MIN_DT_S) {
+      payload->dt_s = FLOW_MIN_DT_S;
+    }
+
+    memset(flow_sum, 0, sizeof(flow_sum));
+    memset(flow_count, 0, sizeof(flow_count));
+
+    const uint8_t *cur = camera_frame->buffer;
+    for (int y = 24; y < IMG_H_CAM - 24; y += FLOW_STEP) {
+      for (int x = 12; x < IMG_W - 12; x += FLOW_STEP) {
+        if (block_texture_5x5(cur, x, y) < FLOW_MIN_TEXTURE) {
+          continue;
+        }
+
+        int best_dx = 0;
+        int best_sad = 0x7fffffff;
+        for (int dx = -FLOW_SEARCH_R; dx <= FLOW_SEARCH_R; dx++) {
+          int sad = block_sad_5x5(cur, flow_prev_frame, x, y, dx);
+          if (sad < best_sad) {
+            best_sad = sad;
+            best_dx = dx;
+          }
+        }
+
+        int sector = (x * FLOW_SECTORS) / IMG_W;
+        if (sector >= FLOW_SECTORS) {
+          sector = FLOW_SECTORS - 1;
+        }
+        flow_sum[sector] += iabs_int(best_dx);
+        flow_count[sector]++;
+      }
+    }
+
+    const float assumed_translation_m = FLOW_ASSUMED_VX_MPS * payload->dt_s;
+    for (int i = 0; i < FLOW_SECTORS; i++) {
+      const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
+      payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
+
+      if (flow_count[i] >= FLOW_MIN_SAMPLES && assumed_translation_m > 1.0e-5f) {
+        float avg_flow_px = (float)flow_sum[i] / (float)flow_count[i];
+        float inv_depth = avg_flow_px / (FLOW_FX_PX * assumed_translation_m);
+        if (inv_depth > FLOW_MAX_INV_DEPTH) {
+          inv_depth = FLOW_MAX_INV_DEPTH;
+        }
+        payload->sector[i].inv_depth = inv_depth;
+        payload->sector[i].ttc_s = avg_flow_px > 0.1f ? FLOW_FX_PX * payload->dt_s / avg_flow_px : 99.0f;
+        payload->sector[i].confidence = (float)flow_count[i] / 32.0f;
+        if (payload->sector[i].confidence > 1.0f) {
+          payload->sector[i].confidence = 1.0f;
+        }
+      } else {
+        payload->sector[i].inv_depth = 0.0f;
+        payload->sector[i].ttc_s = 99.0f;
+        payload->sector[i].confidence = 0.0f;
+      }
+    }
+  }
+
+  memcpy(flow_prev_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
+  flow_prev_ts_us = camera_frame->frame_timestamp;
+  flow_have_prev = true;
+}
+
+static void flow_print_camera_payload(const flow_obstacle_payload_t *payload) {
+  if ((flow_frame_count++ % 10) != 0) {
+    return;
+  }
+
+  printf("flowCam dt=%.3f invDepth:", payload->dt_s);
+  for (int i = 0; i < payload->n_sectors; i++) {
+    printf(" %.2f", payload->sector[i].inv_depth);
+  }
+  printf(" conf:");
+  for (int i = 0; i < payload->n_sectors; i++) {
+    printf(" %.2f", payload->sector[i].confidence);
+  }
+  printf("\n");
+}
+#endif
+
 #ifdef FLOW_OBSTACLE_TEST_ONLY
 static void flow_obstacle_test_only_loop(void) {
   static PI_L2 flow_obstacle_payload_t flow_payload;
@@ -122,6 +263,14 @@ CO_FN_DECLARE(inference_task);
  * this returns, so lib/camera can recycle it while inference runs async. */
 CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
+#ifdef FLOW_OBSTACLE_CAMERA_TEST
+  static PI_FC_L1 co_event_t flow_send_done;
+
+  flow_compute_camera_payload(camera_frame, &flow_camera_payload);
+  flow_obstacle_send_async(&uart, &flow_camera_payload, co_event_init(&flow_send_done));
+  CO_WAIT(&flow_send_done);
+  flow_print_camera_payload(&flow_camera_payload);
+#else
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
   static PI_FC_L1 co_event_t inference_done;
@@ -137,6 +286,7 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 
   iargs.stm32_timestamp = 0;
   co_fn_push_start(&inference_ctx, inference_task, &iargs, co_event_init(&inference_done));
+#endif
 }
 CO_FN_END()
 
@@ -192,6 +342,7 @@ static void main_task(void) {
 #else
   camera_init(&camera, camera_callback);
   camera_init_frames_alloc(&camera);
+#ifndef FLOW_OBSTACLE_CAMERA_TEST
   cluster_init(&cluster);
 
   mem_init();
@@ -207,6 +358,11 @@ static void main_task(void) {
   trace_init();
 #if GATE8_DEBUG_PRINT
   printf("gate8 deploy: init done, starting camera\n");
+#endif
+#else
+  trace_init();
+  printf("flow camera test: move laterally by hand in front of a textured obstacle\n");
+  printf("flow camera test: metric depth assumes VX=%.2fm/s, so use relative trends first\n", FLOW_ASSUMED_VX_MPS);
 #endif
   camera_start(&camera);
 

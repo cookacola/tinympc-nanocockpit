@@ -67,6 +67,11 @@
 // This skips camera capture and the gate8 network entirely.
 // #define FLOW_OBSTACLE_TEST_ONLY
 
+// Camera-only optical-flow obstacle test. This skips the gate8 network, compares
+// consecutive camera frames, bins coarse flow into horizontal cylindrical sectors,
+// and sends/prints the derived sector payload.
+#define FLOW_OBSTACLE_CAMERA_TEST
+
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)
 #define SOC_FREQ_FC                 (246000000)
