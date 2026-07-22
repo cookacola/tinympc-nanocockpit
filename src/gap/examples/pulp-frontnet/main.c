@@ -79,6 +79,25 @@ static PI_L2 gate8_msg_t latest_msg;
 typedef struct { uint32_t stm32_timestamp; } inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
+#ifdef FLOW_OBSTACLE_TEST_ONLY
+static void flow_obstacle_test_only_loop(void) {
+  static PI_L2 flow_obstacle_payload_t flow_payload;
+  static pi_task_t done_task;
+  uint32_t n = 0;
+
+  printf("flow obstacle UART-only test: sending synthetic sectors\n");
+  while (true) {
+    flow_obstacle_make_test_payload(&flow_payload, time_get_us(), 0, 0.1f);
+    flow_obstacle_send_async(&uart, &flow_payload, pi_task_block(&done_task));
+    pi_task_wait_on(&done_task);
+    if ((n++ % 10) == 0) {
+      printf("flowObs test sent %lu\n", n);
+    }
+    pi_time_wait_us(100000);
+  }
+}
+#endif
+
 /* Vertical INTER_AREA resize 160 -> 96, width unchanged. scale 160/96 = 5/3,
  * weights periodic over 3 out-rows per 5 in-rows, 32 blocks. Round-to-nearest,
  * matching cv2.resize INTER_AREA. */
@@ -164,6 +183,10 @@ CO_FN_END()
 static void main_task(void) {
   soc_init();
   uart_init(&uart);
+
+#ifdef FLOW_OBSTACLE_TEST_ONLY
+  flow_obstacle_test_only_loop();
+#else
   camera_init(&camera, camera_callback);
   camera_init_frames_alloc(&camera);
   cluster_init(&cluster);
@@ -187,6 +210,7 @@ static void main_task(void) {
   while (true) {
     pi_yield();
   }
+#endif
 
   pmsis_exit(0);
 }

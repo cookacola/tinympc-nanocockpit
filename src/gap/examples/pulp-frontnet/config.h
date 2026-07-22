@@ -63,6 +63,10 @@
 // full GAP8 sparse-LK frontend is enabled.
 // #define FLOW_OBSTACLE_TEST_UART
 
+// Flow receiver isolation test: send only synthetic obstacle-flow sector frames.
+// This skips camera capture and the gate8 network entirely.
+// #define FLOW_OBSTACLE_TEST_ONLY
+
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)
 #define SOC_FREQ_FC                 (246000000)
