@@ -164,10 +164,13 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   CO_WAIT(&done);
 
 #ifdef FLOW_OBSTACLE_TEST_UART
-  static PI_FC_L1 flow_obstacle_payload_t flow_payload;
-  flow_obstacle_make_test_payload(&flow_payload, time_get_us(), args->stm32_timestamp, 1.0f / HIMAX_FRAME_RATE);
-  flow_obstacle_send_async(&uart, &flow_payload, co_event_init(&done));
-  CO_WAIT(&done);
+  static PI_FC_L1 uint32_t flow_div = 0;
+  if ((flow_div++ % 10) == 0) {
+    static PI_FC_L1 flow_obstacle_payload_t flow_payload;
+    flow_obstacle_make_test_payload(&flow_payload, time_get_us(), args->stm32_timestamp, 1.0f / HIMAX_FRAME_RATE);
+    flow_obstacle_send_async(&uart, &flow_payload, co_event_init(&done));
+    CO_WAIT(&done);
+  }
 #endif
 
 #if GATE8_DEBUG_PRINT
