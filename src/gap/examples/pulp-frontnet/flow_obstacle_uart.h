@@ -11,12 +11,12 @@
 #include <stdint.h>
 
 #define FLOW_OBS_SECT_MAX 9
-#define FLOW_OBS_MSG_HEADER "\x90\x19\x8\x34"
+#define FLOW_OBS_MSG_HEADER "\x90\x19\x8\x35"
 
 typedef struct __attribute__((packed)) {
   float azimuth_rad;
-  float inv_depth;
-  float ttc_s;
+  float flow_x_rad_s;
+  float flow_y_rad_s;
   float confidence;
 } flow_obstacle_sector_t;
 

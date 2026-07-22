@@ -94,9 +94,8 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_LK_ERR_THRESH    18.0f
 #define FLOW_MIN_SAMPLES      2
 #define FLOW_FX_PX            140.0f
-#define FLOW_ASSUMED_VX_MPS   0.20f
 #define FLOW_MIN_DT_S         0.005f
-#define FLOW_MAX_INV_DEPTH    8.0f
+#define FLOW_MAX_RAD_S        20.0f
 #define FLOW_SEND_PERIOD_US   200000u
 #define FLOW_SMOOTH_ALPHA     0.35f
 #define FLOW_HOLD_UPDATES     3
@@ -119,9 +118,9 @@ static volatile bool flow_snapshot_pending = false;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
 static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
-static PI_FC_L1 float flow_smooth_inv[FLOW_SECTORS];
+static PI_FC_L1 float flow_smooth_x[FLOW_SECTORS];
+static PI_FC_L1 float flow_smooth_y[FLOW_SECTORS];
 static PI_FC_L1 float flow_smooth_conf[FLOW_SECTORS];
-static PI_FC_L1 float flow_smooth_ttc[FLOW_SECTORS];
 static PI_FC_L1 uint8_t flow_hold_count[FLOW_SECTORS];
 static PI_FC_L1 bool flow_filter_initialized = false;
 
@@ -310,10 +309,10 @@ static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
 
 static void flow_filter_payload(flow_obstacle_payload_t *payload) {
   if (!flow_filter_initialized) {
-    memset(flow_smooth_inv, 0, sizeof(flow_smooth_inv));
+    memset(flow_smooth_x, 0, sizeof(flow_smooth_x));
+    memset(flow_smooth_y, 0, sizeof(flow_smooth_y));
     memset(flow_smooth_conf, 0, sizeof(flow_smooth_conf));
     for (int i = 0; i < FLOW_SECTORS; i++) {
-      flow_smooth_ttc[i] = 99.0f;
       flow_hold_count[i] = 0;
     }
     flow_filter_initialized = true;
@@ -323,32 +322,32 @@ static void flow_filter_payload(flow_obstacle_payload_t *payload) {
     const bool valid = payload->sector[i].confidence > 0.0f;
     if (valid) {
       if (flow_smooth_conf[i] <= 0.0f) {
-        flow_smooth_inv[i] = payload->sector[i].inv_depth;
+        flow_smooth_x[i] = payload->sector[i].flow_x_rad_s;
+        flow_smooth_y[i] = payload->sector[i].flow_y_rad_s;
         flow_smooth_conf[i] = payload->sector[i].confidence;
-        flow_smooth_ttc[i] = payload->sector[i].ttc_s;
       } else {
-        flow_smooth_inv[i] =
-          FLOW_SMOOTH_ALPHA * payload->sector[i].inv_depth +
-          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_inv[i];
+        flow_smooth_x[i] =
+          FLOW_SMOOTH_ALPHA * payload->sector[i].flow_x_rad_s +
+          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_x[i];
+        flow_smooth_y[i] =
+          FLOW_SMOOTH_ALPHA * payload->sector[i].flow_y_rad_s +
+          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_y[i];
         flow_smooth_conf[i] =
           FLOW_SMOOTH_ALPHA * payload->sector[i].confidence +
           (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_conf[i];
-        flow_smooth_ttc[i] =
-          FLOW_SMOOTH_ALPHA * payload->sector[i].ttc_s +
-          (1.0f - FLOW_SMOOTH_ALPHA) * flow_smooth_ttc[i];
       }
       flow_hold_count[i] = FLOW_HOLD_UPDATES;
     } else if (flow_hold_count[i] > 0) {
       flow_hold_count[i]--;
       flow_smooth_conf[i] *= FLOW_HOLD_CONF_DECAY;
     } else {
-      flow_smooth_inv[i] = 0.0f;
+      flow_smooth_x[i] = 0.0f;
+      flow_smooth_y[i] = 0.0f;
       flow_smooth_conf[i] = 0.0f;
-      flow_smooth_ttc[i] = 99.0f;
     }
 
-    payload->sector[i].inv_depth = flow_smooth_inv[i];
-    payload->sector[i].ttc_s = flow_smooth_ttc[i];
+    payload->sector[i].flow_x_rad_s = flow_smooth_x[i];
+    payload->sector[i].flow_y_rad_s = flow_smooth_y[i];
     payload->sector[i].confidence = flow_smooth_conf[i];
   }
 }
@@ -367,7 +366,6 @@ static void flow_compute_camera_payload(const uint8_t *cur,
   for (int i = 0; i < FLOW_SECTORS; i++) {
     const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
     payload->sector[i].azimuth_rad = (center_x - ((float)IMG_W * 0.5f)) / FLOW_FX_PX;
-    payload->sector[i].ttc_s = 99.0f;
   }
 
   if (flow_have_prev && frame_timestamp > flow_prev_ts_us) {
@@ -399,27 +397,28 @@ static void flow_compute_camera_payload(const uint8_t *cur,
       if (sector >= FLOW_SECTORS) {
         sector = FLOW_SECTORS - 1;
       }
-      flow_sum[sector] += f_abs(dx);
+      flow_sum[sector] += dx;
       flow_count[sector]++;
     }
 
-    const float assumed_translation_m = FLOW_ASSUMED_VX_MPS * payload->dt_s;
     for (int i = 0; i < FLOW_SECTORS; i++) {
-      if (flow_count[i] >= FLOW_MIN_SAMPLES && assumed_translation_m > 1.0e-5f) {
+      if (flow_count[i] >= FLOW_MIN_SAMPLES) {
         float avg_flow_px = flow_sum[i] / (float)flow_count[i];
-        float inv_depth = avg_flow_px / (FLOW_FX_PX * assumed_translation_m);
-        if (inv_depth > FLOW_MAX_INV_DEPTH) {
-          inv_depth = FLOW_MAX_INV_DEPTH;
+        float flow_x_rad_s = avg_flow_px / (FLOW_FX_PX * payload->dt_s);
+        if (flow_x_rad_s > FLOW_MAX_RAD_S) {
+          flow_x_rad_s = FLOW_MAX_RAD_S;
+        } else if (flow_x_rad_s < -FLOW_MAX_RAD_S) {
+          flow_x_rad_s = -FLOW_MAX_RAD_S;
         }
-        payload->sector[i].inv_depth = inv_depth;
-        payload->sector[i].ttc_s = avg_flow_px > 0.1f ? FLOW_FX_PX * payload->dt_s / avg_flow_px : 99.0f;
+        payload->sector[i].flow_x_rad_s = flow_x_rad_s;
+        payload->sector[i].flow_y_rad_s = 0.0f;
         payload->sector[i].confidence = (float)flow_count[i] / 32.0f;
         if (payload->sector[i].confidence > 1.0f) {
           payload->sector[i].confidence = 1.0f;
         }
       } else {
-        payload->sector[i].inv_depth = 0.0f;
-        payload->sector[i].ttc_s = 99.0f;
+        payload->sector[i].flow_x_rad_s = 0.0f;
+        payload->sector[i].flow_y_rad_s = 0.0f;
         payload->sector[i].confidence = 0.0f;
       }
     }
@@ -601,8 +600,7 @@ static void main_task(void) {
 #else
   trace_init();
   printf("flow camera test: move laterally by hand in front of a textured obstacle\n");
-  printf("flow camera test: metric depth assumes VX=%.2fm/s, so use relative trends first\n", FLOW_ASSUMED_VX_MPS);
-  printf("flow camera test: sector values are exposed as STM32 flowObsRx logs\n");
+  printf("flow camera test: sector angular flow is exposed as STM32 flowObsRx logs\n");
 #endif
   camera_start(&camera);
 
