@@ -58,6 +58,11 @@
 // Disable streamer: streamer_send_frame_async becomes a no-op and completes immediately
 // #define STREAMER_DISABLE
 
+// Emit synthetic obstacle-flow sector frames over the same UART used by gate8.
+// This validates the STM32 receiver and log-only half-space synthesis before the
+// full GAP8 sparse-LK frontend is enabled.
+// #define FLOW_OBSTACLE_TEST_UART
+
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)
 #define SOC_FREQ_FC                 (246000000)
