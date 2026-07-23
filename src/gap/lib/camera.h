@@ -46,10 +46,20 @@ typedef struct frame_s {
 
     // Sequential frame ID from the camera's hardware frame counter
     uint8_t frame_id;
+
+    // Monotonic software sequence of frames completed by this pipeline.
+    uint32_t sequence_id;
     
     // GAP8 end-of-frame timestamp [usec]
     uint32_t frame_timestamp;
 } frame_t;
+
+typedef enum {
+    CAMERA_STAGE_STOPPED = 0,
+    CAMERA_STAGE_WAIT_CAPTURE,
+    CAMERA_STAGE_CROP,
+    CAMERA_STAGE_CONSUME,
+} camera_stage_e;
 
 typedef struct camera_s {
     himax_t himax;
@@ -58,6 +68,12 @@ typedef struct camera_s {
     frame_t frames[CAMERA_BUFFERS];
 
     co_fn_t consumer_callback;
+
+    volatile camera_stage_e stage;
+    frame_t *capture_frame;
+    uint32_t last_capture_us;
+    uint32_t last_recovery_us;
+    uint32_t recovery_count;
 } camera_t;
 
 void camera_init(camera_t *camera, co_fn_t consumer_callback);
@@ -69,5 +85,8 @@ size_t camera_get_buffer_size(const camera_t *camera);
 int camera_get_buffer_id(const camera_t *camera, const frame_t *frame);
 
 void camera_start(camera_t *camera);
+void camera_watchdog_poll(camera_t *camera);
+uint32_t camera_get_recovery_count(const camera_t *camera);
+uint32_t camera_get_i2c_error_count(const camera_t *camera);
 
 #endif // __CAMERA_H__

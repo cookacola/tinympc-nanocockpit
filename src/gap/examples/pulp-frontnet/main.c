@@ -46,11 +46,14 @@
 #define IMG_H_CAM    160          // cropped sensor frame from lib/camera
 #define IMG_H_NET    96           // net rows, 15360/160
 #define N_CORNERS    8            // network output count
-#define L2_BUF_SIZE  380000       // net input, scratch and output
+/* DORY's directional-allocation peak is 153600 B (layer 1); keep 6.4 kB
+ * headroom. The old example reserved 380 kB, which prevented coexistence
+ * with camera and optical-flow buffers on GAP8's 512 kB L2. */
+#define L2_BUF_SIZE  160000
 
 // 1 = print per-inference corners over JTAG. Set 0 for a flash-boot deploy:
 // there is no console then and printf can pollute the gate8 UART.
-#define GATE8_DEBUG_PRINT 1
+#define GATE8_DEBUG_PRINT 0
 
 /* FLOAT = INT*EPS + BIAS. Order TL,TR,BR,BL. From gate8-async output_dequant. */
 #define GATE8_EPS  1.61093718e-04f
@@ -69,22 +72,29 @@ typedef struct __attribute__((packed)) {
   gate8_payload_t p;
   uint32_t checksum;            // CRC32 over header+payload
 } gate8_msg_t;
+_Static_assert(sizeof(gate8_msg_t) == 44, "gate packet ABI changed");
 
 static uart_t      uart;
 static camera_t    camera;
 static pi_device_t cluster;     // shared cluster, opened once, reused by the net
 static void       *l2_buffer;   // net input, scratch and output
 static size_t      l2_buffer_size;
-static PI_L2 gate8_msg_t latest_msg;
+static PI_L2 gate8_msg_t gate8_tx_msg;
+/* UART DMA must never reference the inference-owned pending buffer: a cluster
+ * completion can publish the next result while the FC waits for TX completion. */
+static PI_L2 gate8_msg_t gate8_uart_msg;
+static PI_FC_L1 volatile bool gate8_tx_pending = false;
+static PI_FC_L1 uint32_t gate8_tx_dropped = 0;
 
 typedef struct { uint32_t stm32_timestamp; } inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
-#ifdef FLOW_OBSTACLE_CAMERA_TEST
+#if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
 #define FLOW_SECTORS          FLOW_OBS_SECT_MAX
 #define FLOW_HALF_W           (IMG_W / 2)
 #define FLOW_HALF_H           (IMG_H_CAM / 2)
 #define FLOW_MAX_FEATURES     48
+#define FLOW_FEATURES_PER_SECTOR (FLOW_MAX_FEATURES / FLOW_SECTORS)
 #define FLOW_FEATURE_STEP     6
 #define FLOW_FEATURE_BORDER   10
 #define FLOW_MIN_FEATURE_DIST 8
@@ -97,7 +107,7 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_CX_PX            81.10381f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_RAD_S        20.0f
-#define FLOW_SEND_PERIOD_US   200000u
+#define FLOW_SEND_PERIOD_US   60000u
 #define FLOW_SMOOTH_ALPHA     0.35f
 #define FLOW_HOLD_UPDATES     3
 #define FLOW_HOLD_CONF_DECAY  0.60f
@@ -114,8 +124,15 @@ static PI_L2 uint8_t flow_prev_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 uint8_t flow_cur_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 flow_feature_t flow_features[FLOW_MAX_FEATURES];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
+static PI_L2 flow_obstacle_payload_t flow_tx_payload;
 static PI_FC_L1 bool flow_have_prev = false;
 static volatile bool flow_snapshot_pending = false;
+static PI_FC_L1 volatile bool flow_tx_pending = false;
+static PI_FC_L1 uint32_t flow_snapshot_dropped = 0;
+static PI_FC_L1 uint32_t flow_tx_dropped = 0;
+static PI_FC_L1 uint32_t cnn_frame_dropped = 0;
+static PI_FC_L1 uint16_t flow_wire_seq = 1;
+static PI_FC_L1 volatile bool inference_busy = false;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
 static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
@@ -198,31 +215,59 @@ static bool feature_far_enough(const flow_feature_t *features, int n, float x, f
 
 static int select_shi_tomasi_features(const uint8_t *img, flow_feature_t *features) {
   int n = 0;
-  for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER; y += FLOW_FEATURE_STEP) {
-    for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER; x += FLOW_FEATURE_STEP) {
-      float score = shi_tomasi_score(img, IMG_W, x, y);
-      if (score < FLOW_ST_SCORE_THRESH || !feature_far_enough(features, n, (float)x, (float)y)) {
-        continue;
-      }
-
-      int insert = n;
-      while (insert > 0 && features[insert - 1].score < score) {
-        if (insert < FLOW_MAX_FEATURES) {
-          features[insert] = features[insert - 1];
-        }
-        insert--;
-      }
-      if (insert < FLOW_MAX_FEATURES) {
-        features[insert].x = (float)x;
-        features[insert].y = (float)y;
-        features[insert].score = score;
-        if (n < FLOW_MAX_FEATURES) {
-          n++;
+  for (int sector = 0; sector < FLOW_SECTORS; sector++) {
+    const int x0 = sector * IMG_W / FLOW_SECTORS;
+    const int x1 = (sector + 1) * IMG_W / FLOW_SECTORS;
+    for (int slot = 0; slot < FLOW_FEATURES_PER_SECTOR && n < FLOW_MAX_FEATURES; slot++) {
+      float best_score = FLOW_ST_SCORE_THRESH;
+      int best_x = -1;
+      int best_y = -1;
+      for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER; y += FLOW_FEATURE_STEP) {
+        for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER; x += FLOW_FEATURE_STEP) {
+          if (x < x0 || x >= x1 || !feature_far_enough(features, n, (float)x, (float)y)) {
+            continue;
+          }
+          float score = shi_tomasi_score(img, IMG_W, x, y);
+          if (score > best_score) {
+            best_score = score;
+            best_x = x;
+            best_y = y;
+          }
         }
       }
+      if (best_x < 0) {
+        break;
+      }
+      features[n].x = (float)best_x;
+      features[n].y = (float)best_y;
+      features[n].score = best_score;
+      n++;
     }
   }
   return n;
+}
+
+static float robust_near_sample(float *values, int n) {
+  /* Select the near half (largest absolute expansion/parallax), then take
+   * its signed median. n <= 5, so insertion-like sorting is cheaper and
+   * smaller than pulling a general sort into GAP8 code. */
+  for (int i = 0; i < n - 1; i++) {
+    for (int j = i + 1; j < n; j++) {
+      if (f_abs(values[j]) > f_abs(values[i])) {
+        float tmp = values[i]; values[i] = values[j]; values[j] = tmp;
+      }
+    }
+  }
+  int keep = (n + 1) / 2;
+  if (keep < FLOW_MIN_SAMPLES) keep = FLOW_MIN_SAMPLES;
+  for (int i = 0; i < keep - 1; i++) {
+    for (int j = i + 1; j < keep; j++) {
+      if (values[j] < values[i]) {
+        float tmp = values[i]; values[i] = values[j]; values[j] = tmp;
+      }
+    }
+  }
+  return values[keep / 2];
 }
 
 static bool lk_track_level(const uint8_t *prev, const uint8_t *cur,
@@ -356,14 +401,18 @@ static void flow_filter_payload(flow_obstacle_payload_t *payload) {
 static void flow_compute_camera_payload(const uint8_t *cur,
                                         uint32_t frame_timestamp,
                                         flow_obstacle_payload_t *payload) {
-  static PI_FC_L1 float flow_sum[FLOW_SECTORS];
   static PI_FC_L1 int flow_count[FLOW_SECTORS];
+  static PI_FC_L1 float flow_samples[FLOW_SECTORS][FLOW_FEATURES_PER_SECTOR];
+  static PI_FC_L1 float radial_samples[FLOW_SECTORS][FLOW_FEATURES_PER_SECTOR];
+  static PI_FC_L1 int radial_count[FLOW_SECTORS];
 
   memset(payload, 0, sizeof(*payload));
   payload->gap8_ts_us = frame_timestamp;
   payload->dt_s = FLOW_MIN_DT_S;
   payload->n_sectors = FLOW_SECTORS;
-  payload->flags = 0;
+  payload->flags =
+      (camera_get_recovery_count(&camera) > 0 ? 1u : 0u) |
+      (camera_get_i2c_error_count(&camera) > 0 ? 2u : 0u);
   for (int i = 0; i < FLOW_SECTORS; i++) {
     const float center_x = ((float)i + 0.5f) * ((float)IMG_W / (float)FLOW_SECTORS);
     payload->sector[i].azimuth_rad = (center_x - FLOW_CX_PX) / FLOW_FX_PX;
@@ -375,8 +424,8 @@ static void flow_compute_camera_payload(const uint8_t *cur,
       payload->dt_s = FLOW_MIN_DT_S;
     }
 
-    memset(flow_sum, 0, sizeof(flow_sum));
     memset(flow_count, 0, sizeof(flow_count));
+    memset(radial_count, 0, sizeof(radial_count));
 
     build_half_pyramid(cur, flow_cur_half);
     int n_features = select_shi_tomasi_features(flow_prev_frame, flow_features);
@@ -390,7 +439,8 @@ static void flow_compute_camera_payload(const uint8_t *cur,
       }
 
       float dx = nx - flow_features[k].x;
-      if (f_abs(dx) < 0.05f) {
+      float dy = ny - flow_features[k].y;
+      if (dx * dx + dy * dy < 0.0025f) {
         continue;
       }
 
@@ -398,13 +448,24 @@ static void flow_compute_camera_payload(const uint8_t *cur,
       if (sector >= FLOW_SECTORS) {
         sector = FLOW_SECTORS - 1;
       }
-      flow_sum[sector] += dx;
-      flow_count[sector]++;
+      if (flow_count[sector] < FLOW_FEATURES_PER_SECTOR) {
+        flow_samples[sector][flow_count[sector]] = dx;
+        flow_count[sector]++;
+      }
+      const float q = (flow_features[k].x - FLOW_CX_PX) / FLOW_FX_PX;
+      const float p = (flow_features[k].y - 80.0f) / FLOW_FX_PX;
+      const float radius2 = q * q + p * p;
+      if (radius2 > 0.01f && radial_count[sector] < FLOW_FEATURES_PER_SECTOR) {
+        const float qdot = dx / (FLOW_FX_PX * payload->dt_s);
+        const float pdot = dy / (FLOW_FX_PX * payload->dt_s);
+        radial_samples[sector][radial_count[sector]++] =
+          (q * qdot + p * pdot) / radius2;
+      }
     }
 
     for (int i = 0; i < FLOW_SECTORS; i++) {
       if (flow_count[i] >= FLOW_MIN_SAMPLES) {
-        float avg_flow_px = flow_sum[i] / (float)flow_count[i];
+        float avg_flow_px = robust_near_sample(flow_samples[i], flow_count[i]);
         float flow_x_rad_s = avg_flow_px / (FLOW_FX_PX * payload->dt_s);
         if (flow_x_rad_s > FLOW_MAX_RAD_S) {
           flow_x_rad_s = FLOW_MAX_RAD_S;
@@ -412,7 +473,9 @@ static void flow_compute_camera_payload(const uint8_t *cur,
           flow_x_rad_s = -FLOW_MAX_RAD_S;
         }
         payload->sector[i].flow_x_rad_s = flow_x_rad_s;
-        payload->sector[i].flow_y_rad_s = 0.0f;
+        payload->sector[i].flow_y_rad_s =
+          radial_count[i] >= FLOW_MIN_SAMPLES ?
+          robust_near_sample(radial_samples[i], radial_count[i]) : 0.0f;
         payload->sector[i].confidence = (float)flow_count[i] / 32.0f;
         if (payload->sector[i].confidence > 1.0f) {
           payload->sector[i].confidence = 1.0f;
@@ -434,8 +497,11 @@ static void flow_compute_camera_payload(const uint8_t *cur,
 }
 
 static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
-  if (flow_snapshot_pending ||
-      camera_frame->frame_timestamp - flow_last_snapshot_us < FLOW_SEND_PERIOD_US) {
+  if (camera_frame->frame_timestamp - flow_last_snapshot_us < FLOW_SEND_PERIOD_US) {
+    return;
+  }
+  if (flow_snapshot_pending) {
+    flow_snapshot_dropped++;
     return;
   }
 
@@ -446,9 +512,7 @@ static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
 }
 
 static void flow_background_poll(void) {
-  static pi_task_t done_task;
-
-  if (!flow_snapshot_pending) {
+  if (!flow_snapshot_pending || inference_busy) {
     return;
   }
 
@@ -457,12 +521,41 @@ static void flow_background_poll(void) {
   flow_snapshot_pending = false;
 
   if (had_prev) {
-    flow_obstacle_send_async(&uart, &flow_camera_payload, pi_task_block(&done_task));
-    pi_task_wait_on(&done_task);
+    if (flow_tx_pending) {
+      flow_tx_dropped++;
+    } else {
+      memcpy(&flow_tx_payload, &flow_camera_payload, sizeof(flow_tx_payload));
+      flow_tx_payload.reserved = flow_wire_seq++;
+      if (flow_wire_seq == 0) {
+        flow_wire_seq = 1;
+      }
+      flow_tx_pending = true;
+    }
   }
 }
 
 #endif
+
+static void vision_uart_service(void) {
+  static pi_task_t done_task;
+
+  /* One owner for the UART DMA. Gate packets are short and latency-sensitive;
+   * flow follows immediately. At 115200 baud both fit inside one 30 Hz frame. */
+  if (gate8_tx_pending) {
+    memcpy(&gate8_uart_msg, &gate8_tx_msg, sizeof(gate8_uart_msg));
+    gate8_tx_pending = false;
+    uart_write_async(&uart, &gate8_uart_msg, sizeof(gate8_uart_msg),
+                     pi_task_block(&done_task));
+    pi_task_wait_on(&done_task);
+  }
+#if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
+  if (flow_tx_pending) {
+    flow_tx_pending = false;
+    flow_obstacle_send_async(&uart, &flow_tx_payload, pi_task_block(&done_task));
+    pi_task_wait_on(&done_task);
+  }
+#endif
+}
 
 #ifdef FLOW_OBSTACLE_TEST_ONLY
 static void flow_obstacle_test_only_loop(void) {
@@ -507,24 +600,51 @@ CO_FN_DECLARE(inference_task);
  * this returns, so lib/camera can recycle it while inference runs async. */
 CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
-#ifdef FLOW_OBSTACLE_CAMERA_TEST
-  flow_snapshot_frame_from_callback(camera_frame);
-#else
+#ifndef FLOW_OBSTACLE_CAMERA_TEST
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
   static PI_FC_L1 co_event_t inference_done;
+#endif
 
+#ifdef FLOW_OBSTACLE_CAMERA_TEST
+  flow_snapshot_frame_from_callback(camera_frame);
+#elif defined(FLOW_OBSTACLE_ENABLE)
+  /* Alternate camera frames: flow at 15 Hz, CNN at 15 Hz. Before handing an
+   * FC frame to flow, wait for the previous cluster inference. If flow ever
+   * overruns its 66.7 ms slot, preserve obstacle sensing and drop the CNN
+   * frame instead of running both algorithms concurrently. */
+  const bool is_flow_frame = (camera_frame->sequence_id & 1u) == 0u;
+  if (is_flow_frame) {
+    if (started) {
+      while (!co_event_is_done(&inference_done)) {
+        CO_WAIT(&inference_done);
+      }
+    }
+    flow_snapshot_frame_from_callback(camera_frame);
+  } else if (flow_snapshot_pending) {
+    cnn_frame_dropped++;
+  } else {
+    resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
+    /* This legacy field is the only v1 packet sequence slot. A GAP8 camera
+     * timestamp lets STM32 reject duplicated frames without changing layout. */
+    iargs.stm32_timestamp = camera_frame->frame_timestamp;
+    inference_busy = true;
+    co_fn_push_start(&inference_ctx, inference_task, &iargs,
+                     co_event_init(&inference_done));
+    started = true;
+  }
+#else
   if (started) {
     while (!co_event_is_done(&inference_done)) {
       CO_WAIT(&inference_done);
     }
   }
-  started = true;
-
   resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
-
-  iargs.stm32_timestamp = 0;
-  co_fn_push_start(&inference_ctx, inference_task, &iargs, co_event_init(&inference_done));
+  iargs.stm32_timestamp = camera_frame->frame_timestamp;
+  inference_busy = true;
+  co_fn_push_start(&inference_ctx, inference_task, &iargs,
+                   co_event_init(&inference_done));
+  started = true;
 #endif
 }
 CO_FN_END()
@@ -544,13 +664,18 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
     corners[i] = raw[i] * GATE8_EPS + GATE8_BIAS[i];
   }
 
-  memcpy(latest_msg.header, GATE8_MSG_HEADER, 4);
-  latest_msg.p.stm32_timestamp = args->stm32_timestamp;
-  memcpy(latest_msg.p.corner, corners, sizeof(latest_msg.p.corner));
-  latest_msg.checksum = crc32CalculateBuffer(&latest_msg, sizeof(latest_msg) - sizeof(latest_msg.checksum));
-
-  uart_write_async(&uart, &latest_msg, sizeof(latest_msg), co_event_init(&done));
-  CO_WAIT(&done);
+  if (gate8_tx_pending) {
+    gate8_tx_dropped++;
+  } else {
+    memcpy(gate8_tx_msg.header, GATE8_MSG_HEADER, 4);
+    gate8_tx_msg.p.stm32_timestamp = args->stm32_timestamp;
+    memcpy(gate8_tx_msg.p.corner, corners, sizeof(gate8_tx_msg.p.corner));
+    gate8_tx_msg.checksum =
+      crc32CalculateBuffer(&gate8_tx_msg, sizeof(gate8_tx_msg) -
+                           sizeof(gate8_tx_msg.checksum));
+    gate8_tx_pending = true;
+  }
+  inference_busy = false;
 
 #ifdef FLOW_OBSTACLE_TEST_UART
   static PI_FC_L1 uint32_t flow_div = 0;
@@ -606,9 +731,11 @@ static void main_task(void) {
   camera_start(&camera);
 
   while (true) {
-#ifdef FLOW_OBSTACLE_CAMERA_TEST
+#if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
     flow_background_poll();
 #endif
+    vision_uart_service();
+    camera_watchdog_poll(&camera);
     pi_yield();
   }
 #endif

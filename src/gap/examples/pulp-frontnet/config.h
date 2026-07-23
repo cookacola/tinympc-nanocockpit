@@ -67,10 +67,12 @@
 // This skips camera capture and the gate8 network entirely.
 // #define FLOW_OBSTACLE_TEST_ONLY
 
-// Camera-only optical-flow obstacle test. This skips the gate8 network, snapshots
-// camera frames from the capture callback, then runs Shi-Tomasi/LK outside the
-// camera producer path and publishes derived sectors.
-#define FLOW_OBSTACLE_CAMERA_TEST
+// Run sparse optical flow concurrently with gate8 inference. UART transmission
+// is serialized in main.c so the two producers cannot overlap DMA requests.
+#define FLOW_OBSTACLE_ENABLE
+
+// Camera-only optical-flow isolation test. This skips gate8 inference.
+// #define FLOW_OBSTACLE_CAMERA_TEST
 
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)

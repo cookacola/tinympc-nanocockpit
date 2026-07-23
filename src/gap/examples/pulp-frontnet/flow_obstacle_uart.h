@@ -36,6 +36,12 @@ typedef struct __attribute__((packed)) {
   uint32_t checksum;
 } flow_obstacle_msg_t;
 
+_Static_assert(sizeof(float) == 4, "vision wire protocol requires float32");
+_Static_assert(sizeof(flow_obstacle_payload_t) == 160,
+               "flow payload ABI changed");
+_Static_assert(sizeof(flow_obstacle_msg_t) == 168,
+               "flow packet ABI changed");
+
 void flow_obstacle_send_async(uart_t *uart,
                               const flow_obstacle_payload_t *payload,
                               pi_task_t *done_task);
