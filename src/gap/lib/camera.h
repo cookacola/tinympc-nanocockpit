@@ -74,6 +74,8 @@ typedef struct camera_s {
     uint32_t last_capture_us;
     uint32_t last_recovery_us;
     uint32_t recovery_count;
+    uint32_t completed_capture_count;
+    uint8_t last_hardware_frame_count;
 } camera_t;
 
 void camera_init(camera_t *camera, co_fn_t consumer_callback);
@@ -88,5 +90,7 @@ void camera_start(camera_t *camera);
 void camera_watchdog_poll(camera_t *camera);
 uint32_t camera_get_recovery_count(const camera_t *camera);
 uint32_t camera_get_i2c_error_count(const camera_t *camera);
+uint32_t camera_get_completed_capture_count(const camera_t *camera);
+uint8_t camera_get_hardware_frame_count(const camera_t *camera);
 
 #endif // __CAMERA_H__

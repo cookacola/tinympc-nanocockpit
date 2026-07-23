@@ -74,6 +74,10 @@
 // Camera-only optical-flow isolation test. This skips gate8 inference.
 // #define FLOW_OBSTACLE_CAMERA_TEST
 
+// Camera capture/crop/consumer isolation test. This skips optical flow, UART
+// transmission, and gate8 inference.
+// #define CAMERA_CAPTURE_TEST_ONLY
+
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)
 #define SOC_FREQ_FC                 (246000000)

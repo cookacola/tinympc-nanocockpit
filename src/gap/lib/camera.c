@@ -162,6 +162,14 @@ uint32_t camera_get_i2c_error_count(const camera_t *camera) {
     return himax_get_i2c_error_count();
 }
 
+uint32_t camera_get_completed_capture_count(const camera_t *camera) {
+    return camera->completed_capture_count;
+}
+
+uint8_t camera_get_hardware_frame_count(const camera_t *camera) {
+    return camera->last_hardware_frame_count;
+}
+
 CO_FN_BEGIN(camera_task, camera_t *, camera)
 {
     static int capture_idx, crop_idx, consume_idx;
@@ -199,6 +207,8 @@ CO_FN_BEGIN(camera_task, camera_t *, camera)
             trace_set((crop_idx % CAMERA_BUFFERS == 0) ? TRACE_CAMERA_BUF_0 : TRACE_CAMERA_BUF_1, false);
             himax_stop(&camera->himax);
             frame->frame_id = himax_get_frame_count(&camera->himax);
+            camera->last_hardware_frame_count = frame->frame_id;
+            camera->completed_capture_count++;
             frame->sequence_id = (uint32_t)crop_idx;
             frame->frame_timestamp = time_get_us();
 

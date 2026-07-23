@@ -46,6 +46,17 @@
 #define L3_WEIGHTS_SIZE 4000000
 #define L3_INPUT_SIZE 1500000
 #define L3_OUTPUT_SIZE 1500000
+#define NETWORK_L1_BUFFER_SIZE 35000
+#define NETWORK_MASTER_STACK_SIZE 3800
+#define NETWORK_SLAVE_STACK_SIZE 3600
+
+/* 8 cores reserve 3800 + 7*3600 bytes of task stacks. Together with DORY's
+ * 35 kB layer workspace that leaves only ~1.5 kB of GAP8 cluster L1 for the
+ * runtime and causes nondeterministic layer/DMA hangs on hardware. */
+#if NUM_CORES > 7
+#error gate8-async requires NUM_CORES <= 7 to fit safely in GAP8 cluster L1
+#endif
+
 static void *L3_weights = NULL;
 static void *L3_input = NULL;
 static void *L3_output = NULL;
@@ -80,7 +91,7 @@ void network_terminate() {
 
 void execute_layer_fork(void *args) {
   layer_args_t *layer_args = (layer_args_t *)args;
-  if (pi_core_id() == 0) layer_args->L1_buffer = pmsis_l1_malloc(35000);
+  if (pi_core_id() == 0) layer_args->L1_buffer = pmsis_l1_malloc(NETWORK_L1_BUFFER_SIZE);
 
   switch (layer_args->layer_id)
   {
@@ -113,7 +124,7 @@ void execute_layer_fork(void *args) {
       break;
   }
 
-  if (pi_core_id() == 0) pmsis_l1_malloc_free(layer_args->L1_buffer, 35000);
+  if (pi_core_id() == 0) pmsis_l1_malloc_free(layer_args->L1_buffer, NETWORK_L1_BUFFER_SIZE);
 }
 
 struct network_run_token network_run_async(void *l2_buffer, size_t l2_buffer_size, void *l2_final_output, int exec, int initial_dir)
@@ -136,8 +147,9 @@ struct network_run_token network_run_async(void *l2_buffer, size_t l2_buffer_siz
   if (pi_cluster_open(&cluster_dev))
     return;
   // Then offload an entry point, this will get executed on the cluster controller
-  cluster_task.stack_size = 3800;
-  cluster_task.slave_stack_size = 3600;
+  cluster_task.nb_cores = NUM_CORES;
+  cluster_task.stack_size = NETWORK_MASTER_STACK_SIZE;
+  cluster_task.slave_stack_size = NETWORK_SLAVE_STACK_SIZE;
   pi_cluster_send_task_to_cl(&cluster_dev, &cluster_task);
   return (struct network_run_token) {
     .cluster_dev = cluster_dev
@@ -168,8 +180,9 @@ void network_run_async_cl(void *l2_buffer, size_t l2_buffer_size, void *l2_final
   args_async[3] = (unsigned int) exec;
   args_async[4] = (unsigned int) initial_dir;
   pi_cluster_task(&cluster_task_async, network_run_cluster, args_async);
-  cluster_task_async.stack_size = 3800;
-  cluster_task_async.slave_stack_size = 3600;
+  cluster_task_async.nb_cores = NUM_CORES;
+  cluster_task_async.stack_size = NETWORK_MASTER_STACK_SIZE;
+  cluster_task_async.slave_stack_size = NETWORK_SLAVE_STACK_SIZE;
   pi_cluster_send_task_to_cl_async(cluster, &cluster_task_async, network_done);
 }
 

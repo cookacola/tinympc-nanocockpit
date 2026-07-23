@@ -85,6 +85,18 @@ static PI_L2 gate8_msg_t gate8_tx_msg;
 static PI_L2 gate8_msg_t gate8_uart_msg;
 static PI_FC_L1 volatile bool gate8_tx_pending = false;
 static PI_FC_L1 uint32_t gate8_tx_dropped = 0;
+static PI_FC_L1 uint32_t uart_queued_count = 0;
+static PI_FC_L1 uint32_t uart_completed_count = 0;
+/* GAP SDK 3.8's asynchronous UART completion has no transfer-status result. */
+static PI_FC_L1 uint32_t uart_error_count = 0;
+static PI_FC_L1 uint32_t cnn_invocation_count = 0;
+static PI_FC_L1 uint32_t cnn_completion_count = 0;
+static PI_FC_L1 volatile bool inference_busy = false;
+static PI_FC_L1 uint32_t flow_snapshot_count = 0;
+static PI_FC_L1 uint32_t flow_processed_count = 0;
+static PI_FC_L1 uint32_t flow_transmitted_count = 0;
+static PI_FC_L1 uint32_t flow_snapshot_dropped = 0;
+static PI_FC_L1 uint32_t flow_tx_dropped = 0;
 
 typedef struct { uint32_t stm32_timestamp; } inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
@@ -128,11 +140,8 @@ static PI_L2 flow_obstacle_payload_t flow_tx_payload;
 static PI_FC_L1 bool flow_have_prev = false;
 static volatile bool flow_snapshot_pending = false;
 static PI_FC_L1 volatile bool flow_tx_pending = false;
-static PI_FC_L1 uint32_t flow_snapshot_dropped = 0;
-static PI_FC_L1 uint32_t flow_tx_dropped = 0;
 static PI_FC_L1 uint32_t cnn_frame_dropped = 0;
 static PI_FC_L1 uint16_t flow_wire_seq = 1;
-static PI_FC_L1 volatile bool inference_busy = false;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
 static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
@@ -508,6 +517,7 @@ static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
   memcpy(flow_cur_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
   flow_snapshot_ts_us = camera_frame->frame_timestamp;
   flow_last_snapshot_us = camera_frame->frame_timestamp;
+  flow_snapshot_count++;
   flow_snapshot_pending = true;
 }
 
@@ -518,6 +528,7 @@ static void flow_background_poll(void) {
 
   bool had_prev = flow_have_prev;
   flow_compute_camera_payload(flow_cur_frame, flow_snapshot_ts_us, &flow_camera_payload);
+  flow_processed_count++;
   flow_snapshot_pending = false;
 
   if (had_prev) {
@@ -544,15 +555,20 @@ static void vision_uart_service(void) {
   if (gate8_tx_pending) {
     memcpy(&gate8_uart_msg, &gate8_tx_msg, sizeof(gate8_uart_msg));
     gate8_tx_pending = false;
+    uart_queued_count++;
     uart_write_async(&uart, &gate8_uart_msg, sizeof(gate8_uart_msg),
                      pi_task_block(&done_task));
     pi_task_wait_on(&done_task);
+    uart_completed_count++;
   }
 #if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
   if (flow_tx_pending) {
     flow_tx_pending = false;
+    uart_queued_count++;
     flow_obstacle_send_async(&uart, &flow_tx_payload, pi_task_block(&done_task));
     pi_task_wait_on(&done_task);
+    uart_completed_count++;
+    flow_transmitted_count++;
   }
 #endif
 }
@@ -566,10 +582,14 @@ static void flow_obstacle_test_only_loop(void) {
   printf("flow obstacle UART-only test: sending synthetic sectors\n");
   while (true) {
     flow_obstacle_make_test_payload(&flow_payload, time_get_us(), 0, 0.1f);
+    uart_queued_count++;
     flow_obstacle_send_async(&uart, &flow_payload, pi_task_block(&done_task));
     pi_task_wait_on(&done_task);
+    uart_completed_count++;
+    flow_transmitted_count++;
     if ((n++ % 10) == 0) {
-      printf("flowObs test sent %lu\n", n);
+      printf("flowObs test sent=%lu uart=%lu/%lu/%lu\n", n,
+             uart_queued_count, uart_completed_count, uart_error_count);
     }
     pi_time_wait_us(100000);
   }
@@ -600,13 +620,15 @@ CO_FN_DECLARE(inference_task);
  * this returns, so lib/camera can recycle it while inference runs async. */
 CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
-#ifndef FLOW_OBSTACLE_CAMERA_TEST
+#if !defined(FLOW_OBSTACLE_CAMERA_TEST) && !defined(CAMERA_CAPTURE_TEST_ONLY)
   static PI_FC_L1 bool started = false;
   static PI_FC_L1 inference_args_t iargs;
   static PI_FC_L1 co_event_t inference_done;
 #endif
 
-#ifdef FLOW_OBSTACLE_CAMERA_TEST
+#ifdef CAMERA_CAPTURE_TEST_ONLY
+  (void)camera_frame;
+#elif defined(FLOW_OBSTACLE_CAMERA_TEST)
   flow_snapshot_frame_from_callback(camera_frame);
 #elif defined(FLOW_OBSTACLE_ENABLE)
   /* Alternate camera frames: flow at 15 Hz, CNN at 15 Hz. Before handing an
@@ -655,8 +677,10 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   static PI_FC_L1 float corners[N_CORNERS];
 
   trace_set(TRACE_USER_0, true);
+  cnn_invocation_count++;
   network_run_async_cl(l2_buffer, l2_buffer_size, l2_buffer, 0, 1, &cluster, co_event_init(&done));
   CO_WAIT(&done);
+  cnn_completion_count++;
   trace_set(TRACE_USER_0, false);
 
   const int32_t *raw = (const int32_t *) l2_buffer;
@@ -697,6 +721,39 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
 }
 CO_FN_END()
 
+static const char *camera_stage_name(camera_stage_e stage) {
+  switch (stage) {
+    case CAMERA_STAGE_STOPPED:      return "stopped";
+    case CAMERA_STAGE_WAIT_CAPTURE: return "capture";
+    case CAMERA_STAGE_CROP:         return "crop";
+    case CAMERA_STAGE_CONSUME:      return "consume";
+    default:                        return "unknown";
+  }
+}
+
+static void diagnostics_heartbeat(void) {
+  static PI_FC_L1 uint32_t last_print_us = 0;
+  const uint32_t now = time_get_us();
+  if (now - last_print_us < 1000000u) {
+    return;
+  }
+  last_print_us = now;
+
+  printf("hb cam=%lu hw=%u stage=%s age_ms=%lu rec=%lu i2c=%lu"
+         " flow=%lu/%lu/%lu fd=%lu/%lu"
+         " uart=%lu/%lu/%lu cnn=%lu/%lu\n",
+         camera_get_completed_capture_count(&camera),
+         camera_get_hardware_frame_count(&camera),
+         camera_stage_name(camera.stage),
+         (now - camera.last_capture_us) / 1000u,
+         camera_get_recovery_count(&camera),
+         camera_get_i2c_error_count(&camera),
+         flow_snapshot_count, flow_processed_count, flow_transmitted_count,
+         flow_snapshot_dropped, flow_tx_dropped,
+         uart_queued_count, uart_completed_count, uart_error_count,
+         cnn_invocation_count, cnn_completion_count);
+}
+
 static void main_task(void) {
   soc_init();
   uart_init(&uart);
@@ -706,7 +763,7 @@ static void main_task(void) {
 #else
   camera_init(&camera, camera_callback);
   camera_init_frames_alloc(&camera);
-#ifndef FLOW_OBSTACLE_CAMERA_TEST
+#if !defined(FLOW_OBSTACLE_CAMERA_TEST) && !defined(CAMERA_CAPTURE_TEST_ONLY)
   cluster_init(&cluster);
 
   mem_init();
@@ -723,10 +780,13 @@ static void main_task(void) {
 #if GATE8_DEBUG_PRINT
   printf("gate8 deploy: init done, starting camera\n");
 #endif
-#else
+#elif defined(FLOW_OBSTACLE_CAMERA_TEST)
   trace_init();
   printf("flow camera test: move laterally by hand in front of a textured obstacle\n");
   printf("flow camera test: sector angular flow is exposed as STM32 flowObsRx logs\n");
+#else
+  trace_init();
+  printf("camera capture-only test\n");
 #endif
   camera_start(&camera);
 
@@ -735,7 +795,14 @@ static void main_task(void) {
     flow_background_poll();
 #endif
     vision_uart_service();
-    camera_watchdog_poll(&camera);
+    /* A GAP8 cluster inference can keep the FC from servicing a pending CPI
+     * completion for longer than the camera timeout. That is expected
+     * backpressure, not a dead sensor; reconfiguring Himax here corrupted the
+     * following inference/capture cycle. */
+    if (!inference_busy) {
+      camera_watchdog_poll(&camera);
+    }
+    diagnostics_heartbeat();
     pi_yield();
   }
 #endif

@@ -2,7 +2,10 @@
 # Mirrors frontnet-160x32-bgaug/network.mk with gate8-dory's flat hex names, and
 # drops src/main.c so the app's main is used.
 
-CORE ?= 8
+# Seven workers leave one 3.6 kB slave-stack allocation out of cluster L1.
+# With eight workers, DORY's 35 kB workspace plus task stacks consume ~64 kB
+# of GAP8's 65.5 kB L1 and repeated layers hang nondeterministically.
+CORE ?= 7
 FLASH_TYPE ?= HYPERFLASH
 RAM_TYPE ?= HYPERRAM
 
