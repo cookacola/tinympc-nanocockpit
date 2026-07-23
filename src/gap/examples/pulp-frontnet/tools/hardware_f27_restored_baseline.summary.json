@@ -1,0 +1,159 @@
+{
+  "flow_total_us": {
+    "count": 2,
+    "mean": 17059.5,
+    "min": 17029,
+    "p50": 17059.5,
+    "p95": 17086.95,
+    "p99": 17089.39,
+    "max": 17090
+  },
+  "flow_track_us": {
+    "count": 2,
+    "mean": 10895.0,
+    "min": 10865,
+    "p50": 10895.0,
+    "p95": 10922.0,
+    "p99": 10924.4,
+    "max": 10925
+  },
+  "frame_dt_us": {
+    "count": 2,
+    "mean": 66665.5,
+    "min": 66650,
+    "p50": 66665.5,
+    "p95": 66679.45,
+    "p99": 66680.69,
+    "max": 66681
+  },
+  "accepted_tracks": {
+    "count": 2,
+    "mean": 11.5,
+    "min": 11,
+    "p50": 11.5,
+    "p95": 11.95,
+    "p99": 11.989999999999998,
+    "max": 12
+  },
+  "mean_photometric_error": {
+    "count": 2,
+    "mean": 0.9470000000000001,
+    "min": 0.934,
+    "p50": 0.9470000000000001,
+    "p95": 0.9587,
+    "p99": 0.9597399999999999,
+    "max": 0.96
+  },
+  "valid_sector_count": {
+    "count": 2,
+    "mean": 6.0,
+    "min": 6,
+    "p50": 6.0,
+    "p95": 6.0,
+    "p99": 6.0,
+    "max": 6
+  },
+  "flow_processed_hz": {
+    "count": 1,
+    "mean": 14.918082080752777,
+    "min": 14.918082080752777,
+    "p50": 14.918082080752777,
+    "p95": 14.918082080752777,
+    "p99": 14.918082080752777,
+    "max": 14.918082080752777
+  },
+  "cnn_completed_hz": {
+    "count": 1,
+    "mean": 14.918082080752777,
+    "min": 14.918082080752777,
+    "p50": 14.918082080752777,
+    "p95": 14.918082080752777,
+    "p99": 14.918082080752777,
+    "max": 14.918082080752777
+  },
+  "aggregate_profiles": [
+    {
+      "flow_count": 420,
+      "flow_total_mean_us": 17011,
+      "flow_total_std_us": 178,
+      "flow_total_min_us": 16204,
+      "flow_total_max_us": 17303,
+      "flow_track_mean_us": 10836,
+      "flow_track_std_us": 166,
+      "flow_track_min_us": 10101,
+      "flow_track_max_us": 11078,
+      "frame_dt_mean_us": 65073,
+      "frame_dt_std_us": 7098,
+      "frame_dt_min_us": 33325,
+      "frame_dt_max_us": 66681,
+      "selected_mean": 26,
+      "selected_std": 0,
+      "accepted_mean": 13,
+      "accepted_std": 3,
+      "photometric_error_mean_milli": 1141,
+      "photometric_error_std_milli": 492,
+      "photometric_error_min_milli": 705,
+      "photometric_error_max_milli": 4880,
+      "valid_sectors_mean": 6,
+      "valid_sectors_std": 1,
+      "cnn_count": 420,
+      "cnn_mean_us": 51426,
+      "cnn_std_us": 178,
+      "cnn_min_us": 50628,
+      "cnn_max_us": 51697
+    },
+    {
+      "flow_count": 447,
+      "flow_total_mean_us": 17029,
+      "flow_total_std_us": 157,
+      "flow_total_min_us": 16571,
+      "flow_total_max_us": 17304,
+      "flow_track_mean_us": 10850,
+      "flow_track_std_us": 144,
+      "flow_track_min_us": 10406,
+      "flow_track_max_us": 11078,
+      "frame_dt_mean_us": 64926,
+      "frame_dt_std_us": 7458,
+      "frame_dt_min_us": 24658,
+      "frame_dt_max_us": 66681,
+      "selected_mean": 26,
+      "selected_std": 0,
+      "accepted_mean": 13,
+      "accepted_std": 3,
+      "photometric_error_mean_milli": 1193,
+      "photometric_error_std_milli": 838,
+      "photometric_error_min_milli": 786,
+      "photometric_error_max_milli": 7344,
+      "valid_sectors_mean": 6,
+      "valid_sectors_std": 1,
+      "cnn_count": 447,
+      "cnn_mean_us": 51409,
+      "cnn_std_us": 678,
+      "cnn_min_us": 37476,
+      "cnn_max_us": 51727
+    }
+  ],
+  "quantile_windows": [
+    {
+      "flow_count": 420,
+      "flow_total_p95_us_upper": 17250,
+      "flow_total_p99_us_upper": 17250,
+      "cnn_count": 420,
+      "cnn_p95_us_upper": 51750,
+      "cnn_p99_us_upper": 51750
+    },
+    {
+      "flow_count": 447,
+      "flow_total_p95_us_upper": 17250,
+      "flow_total_p99_us_upper": 17500,
+      "cnn_count": 447,
+      "cnn_p95_us_upper": 51750,
+      "cnn_p99_us_upper": 51750
+    }
+  ],
+  "notes": [
+    "Photometric residual is not ground-truth optical-flow error.",
+    "Discard the first CNN inference when analyzing warm-up latency.",
+    "Firmware p95/p99 values are conservative 250 us histogram-bin upper bounds."
+  ]
+}

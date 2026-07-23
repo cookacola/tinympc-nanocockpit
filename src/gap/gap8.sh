@@ -14,9 +14,10 @@
 #   ./gap8.sh <example-subdir> [make args...]
 #
 # Examples:
-#   ./gap8.sh examples/pulp-frontnet clean all flash   # build + flash to GAP8 flash over JTAG
-#   ./gap8.sh examples/pulp-frontnet all run           # build + run once over JTAG (semihosted stdout)
-#   ./gap8.sh examples/cpx all run platform=gvsoc      # build + run in the GVSOC simulator (no hardware)
+#   ./gap8.sh examples/pulp-frontnet clean build       # build only; never touches JTAG
+#   ./gap8.sh examples/pulp-frontnet clean all         # build + image + readfs flash over JTAG
+#   ./gap8.sh examples/pulp-frontnet build run         # build + run once over JTAG (semihosted stdout)
+#   ./gap8.sh examples/cpx build run platform=gvsoc    # build + run in the GVSOC simulator (no hardware)
 #   ./gap8.sh examples/streamer clean                  # clean
 #
 # JTAG adapter: defaults to the Olimex ARM-USB-TINY-H (the adapter connected to
@@ -27,11 +28,20 @@ IMAGE="registry.gitlab.com/eliacereda/gapsdk:22.04-3.8.1"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GAP_CONFIG="${GAP_CONFIG:-ai_deck}"
 CABLE="${GAPY_OPENOCD_CABLE:-interface/ftdi/olimex-arm-usb-tiny-h.cfg}"
+REPO_DIR="$(cd "$PROJECT_DIR/../.." && pwd)"
+BUILD_COMMIT="$(git -C "$REPO_DIR" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
+if [ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]; then
+  BUILD_STATE=dirty
+else
+  BUILD_STATE=clean
+fi
+FLOW_BUILD_ID="${FLOW_BUILD_ID:-${BUILD_COMMIT}-${BUILD_STATE}}"
 
 if [ $# -lt 1 ]; then
   echo "Usage: ./gap8.sh <example-subdir> [make args...]" >&2
-  echo "  e.g. ./gap8.sh examples/pulp-frontnet clean all flash" >&2
-  echo "       ./gap8.sh examples/cpx all run platform=gvsoc" >&2
+  echo "  e.g. ./gap8.sh examples/pulp-frontnet clean build" >&2
+  echo "       ./gap8.sh examples/pulp-frontnet clean all  # includes JTAG flash" >&2
+  echo "       ./gap8.sh examples/cpx build run platform=gvsoc" >&2
   exit 1
 fi
 SUBDIR="$1"; shift
@@ -52,6 +62,7 @@ exec docker run --rm \
   --platform linux/arm64 \
   --privileged -v /dev/bus/usb:/dev/bus/usb \
   -e "GAPY_OPENOCD_CABLE=$CABLE" \
+  -e "FLOW_BUILD_ID=$FLOW_BUILD_ID" \
   -v "$PROJECT_DIR":/module/data \
   -w "/module/data/$SUBDIR" \
   "$IMAGE" \

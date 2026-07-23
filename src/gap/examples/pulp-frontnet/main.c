@@ -109,7 +109,12 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_SECTORS          FLOW_OBS_SECT_MAX
 #define FLOW_HALF_W           (IMG_W / 2)
 #define FLOW_HALF_H           (IMG_H_CAM / 2)
+#ifndef FLOW_MAX_FEATURES
 #define FLOW_MAX_FEATURES     27
+#endif
+#if (FLOW_MAX_FEATURES != 27) && (FLOW_MAX_FEATURES != 36)
+#error "FLOW_MAX_FEATURES must be the evaluated 27- or 36-feature configuration"
+#endif
 #define FLOW_FEATURES_PER_SECTOR (FLOW_MAX_FEATURES / FLOW_SECTORS)
 #define FLOW_FEATURE_STEP     6
 #define FLOW_FEATURE_BORDER   10
@@ -127,11 +132,16 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_CX_PX            81.10381f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_RAD_S        20.0f
+#ifndef VISION_PERIOD_US
 #define VISION_PERIOD_US      65000u
+#endif
 #define FLOW_SMOOTH_ALPHA     0.35f
 #define FLOW_HOLD_UPDATES     3
 #define FLOW_HOLD_CONF_DECAY  0.60f
 #define DIAGNOSTICS_PERIOD_US 30000000u
+#ifndef FLOW_BUILD_ID
+#define FLOW_BUILD_ID "unknown"
+#endif
 
 typedef struct {
   float x;
@@ -215,6 +225,43 @@ static PI_FC_L1 uint64_t cnn_profile_sum_sq_us = 0;
 static PI_FC_L1 uint32_t cnn_profile_min_us = UINT32_MAX;
 static PI_FC_L1 uint32_t cnn_profile_max_us = 0;
 static PI_FC_L1 bool cnn_profile_skip_next = false;
+
+/*
+ * Per-frame JTAG prints perturb the alternating flow/CNN schedule. Keep
+ * bounded 250 us histograms and report conservative bin upper bounds for
+ * p95/p99 in each heartbeat window. The final bin catches overruns.
+ */
+#define PROFILE_HIST_BIN_US 250u
+#define PROFILE_HIST_BINS   256u
+static PI_FC_L1 uint16_t flow_total_hist[PROFILE_HIST_BINS];
+static PI_FC_L1 uint16_t cnn_time_hist[PROFILE_HIST_BINS];
+
+static void profile_hist_add(uint16_t *hist, uint32_t duration_us) {
+  uint32_t bin = duration_us / PROFILE_HIST_BIN_US;
+  if (bin >= PROFILE_HIST_BINS) {
+    bin = PROFILE_HIST_BINS - 1u;
+  }
+  if (hist[bin] != UINT16_MAX) {
+    hist[bin]++;
+  }
+}
+
+static uint32_t profile_hist_percentile_us(const uint16_t *hist,
+                                           uint32_t count,
+                                           uint32_t percentile) {
+  if (count == 0u) {
+    return 0u;
+  }
+  const uint32_t target = (count * percentile + 99u) / 100u;
+  uint32_t cumulative = 0u;
+  for (uint32_t bin = 0u; bin < PROFILE_HIST_BINS; bin++) {
+    cumulative += hist[bin];
+    if (cumulative >= target) {
+      return (bin + 1u) * PROFILE_HIST_BIN_US;
+    }
+  }
+  return PROFILE_HIST_BINS * PROFILE_HIST_BIN_US;
+}
 
 static inline float f_abs(float v) {
   return v < 0.0f ? -v : v;
@@ -683,6 +730,7 @@ static void flow_compute_camera_payload(const uint8_t *cur,
     flow_profile_skip_next = false;
   } else if (flow_diag.sequence > 1) {
     flow_profile.count++;
+    profile_hist_add(flow_total_hist, flow_diag.total_us);
     flow_profile.total_sum_us += flow_diag.total_us;
     flow_profile.total_sum_sq_us +=
       (uint64_t)flow_diag.total_us * flow_diag.total_us;
@@ -950,6 +998,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
     cnn_profile_skip_next = false;
   } else if (cnn_completion_count > 1) {
     cnn_profile_count++;
+    profile_hist_add(cnn_time_hist, cnn_last_us);
     cnn_profile_sum_us += cnn_last_us;
     cnn_profile_sum_sq_us += (uint64_t)cnn_last_us * cnn_last_us;
     if (cnn_last_us < cnn_profile_min_us) {
@@ -1032,9 +1081,11 @@ static void diagnostics_heartbeat(void) {
   }
   last_print_us = now;
 
-  printf("hb t_us=%lu cam=%lu hw=%u stage=%s age_ms=%lu rec=%lu i2c=%lu"
+  printf("hb build=%s t_us=%lu cam=%lu hw=%u stage=%s age_ms=%lu rec=%lu i2c=%lu feat=%u"
+         " target_fps=%u period_us=%u"
          " flow=%lu/%lu/%lu fd=%lu/%lu"
          " uart=%lu/%lu/%lu cnn=%lu/%lu/%lu/%lu\n",
+         FLOW_BUILD_ID,
          now,
          camera_get_completed_capture_count(&camera),
          camera_get_hardware_frame_count(&camera),
@@ -1042,6 +1093,9 @@ static void diagnostics_heartbeat(void) {
          (now - camera.last_capture_us) / 1000u,
          camera_get_recovery_count(&camera),
          camera_get_i2c_error_count(&camera),
+         (unsigned)FLOW_MAX_FEATURES,
+         (unsigned)(HIMAX_FRAME_RATE + 0.5f),
+         (unsigned)VISION_PERIOD_US,
          flow_snapshot_count, flow_processed_count, flow_transmitted_count,
          flow_snapshot_dropped, flow_tx_dropped,
          uart_queued_count, uart_completed_count, uart_error_count,
@@ -1096,14 +1150,27 @@ static void diagnostics_heartbeat(void) {
            profile_stddev(cnn_profile_sum_us,
                           cnn_profile_sum_sq_us, cnn_profile_count),
            cnn_profile_min_us, cnn_profile_max_us);
+    printf("quantile,%lu,%lu,%lu,%lu,%lu,%lu\n",
+           flow_profile.count,
+           profile_hist_percentile_us(flow_total_hist,
+                                      flow_profile.count, 95u),
+           profile_hist_percentile_us(flow_total_hist,
+                                      flow_profile.count, 99u),
+           cnn_profile_count,
+           profile_hist_percentile_us(cnn_time_hist,
+                                      cnn_profile_count, 95u),
+           profile_hist_percentile_us(cnn_time_hist,
+                                      cnn_profile_count, 99u));
   }
   memset(&flow_profile, 0, sizeof(flow_profile));
+  memset(flow_total_hist, 0, sizeof(flow_total_hist));
   flow_profile_skip_next = true;
   cnn_profile_count = 0;
   cnn_profile_sum_us = 0;
   cnn_profile_sum_sq_us = 0;
   cnn_profile_min_us = UINT32_MAX;
   cnn_profile_max_us = 0;
+  memset(cnn_time_hist, 0, sizeof(cnn_time_hist));
   cnn_profile_skip_next = true;
 #endif
 }

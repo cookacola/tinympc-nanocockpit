@@ -43,6 +43,15 @@ PROFILE_FIELDS = (
     "cnn_count", "cnn_mean_us", "cnn_std_us", "cnn_min_us", "cnn_max_us",
 )
 
+QUANTILE_FIELDS = (
+    "flow_count",
+    "flow_total_p95_us_upper",
+    "flow_total_p99_us_upper",
+    "cnn_count",
+    "cnn_p95_us_upper",
+    "cnn_p99_us_upper",
+)
+
 
 def percentile(values, probability):
     if not values:
@@ -64,6 +73,7 @@ def stats(values):
         "min": min(values),
         "p50": percentile(values, 0.50),
         "p95": percentile(values, 0.95),
+        "p99": percentile(values, 0.99),
         "max": max(values),
     }
 
@@ -122,6 +132,15 @@ def parse_profile(line):
     return {name: int(value) for name, value in zip(PROFILE_FIELDS, values)}
 
 
+def parse_quantile(line):
+    if not line.startswith("quantile,"):
+        return None
+    values = line.strip().split(",")[1:]
+    if len(values) != len(QUANTILE_FIELDS):
+        return None
+    return {name: int(value) for name, value in zip(QUANTILE_FIELDS, values)}
+
+
 def rate_windows(heartbeats):
     rows = []
     counter_fields = (
@@ -159,6 +178,7 @@ def main():
     flows = []
     heartbeats = []
     profiles = []
+    quantiles = []
     for line in args.log.read_text(errors="replace").splitlines():
         flow = parse_flow(line)
         if flow:
@@ -169,11 +189,15 @@ def main():
         profile = parse_profile(line)
         if profile:
             profiles.append(profile)
+        quantile = parse_quantile(line)
+        if quantile:
+            quantiles.append(quantile)
 
     windows = rate_windows(heartbeats)
     flow_csv = args.out_prefix.with_suffix(".flow.csv")
     rate_csv = args.out_prefix.with_suffix(".rates.csv")
     profile_csv = args.out_prefix.with_suffix(".profiles.csv")
+    quantile_csv = args.out_prefix.with_suffix(".quantiles.csv")
     summary_json = args.out_prefix.with_suffix(".summary.json")
 
     flow_columns = list(FLOW_FIELDS) + [
@@ -195,6 +219,11 @@ def main():
         writer.writeheader()
         writer.writerows(profiles)
 
+    with quantile_csv.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=QUANTILE_FIELDS)
+        writer.writeheader()
+        writer.writerows(quantiles)
+
     summary = {
         "flow_total_us": stats([row["total_us"] for row in flows]),
         "flow_track_us": stats([row["track_us"] for row in flows]),
@@ -207,15 +236,18 @@ def main():
         "flow_processed_hz": stats([row["flow_processed_hz"] for row in windows]),
         "cnn_completed_hz": stats([row["cnn_completions_hz"] for row in windows]),
         "aggregate_profiles": profiles,
+        "quantile_windows": quantiles,
         "notes": [
             "Photometric residual is not ground-truth optical-flow error.",
             "Discard the first CNN inference when analyzing warm-up latency.",
+            "Firmware p95/p99 values are conservative 250 us histogram-bin upper bounds.",
         ],
     }
     summary_json.write_text(json.dumps(summary, indent=2) + "\n")
     print(flow_csv)
     print(rate_csv)
     print(profile_csv)
+    print(quantile_csv)
     print(summary_json)
 
 

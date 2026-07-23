@@ -180,7 +180,9 @@
 #define HIMAX_DGAIN          (0x0100)     
 
 // Himax desired frame rate [Hz]
+#ifndef HIMAX_FRAME_RATE
 #define HIMAX_FRAME_RATE    (30.0f)
+#endif
 
 // Print HIMAX configuration after acquiring the first frame (requires VERBOSE)
 // #define HIMAX_CONFIG_DUMP_ONCE

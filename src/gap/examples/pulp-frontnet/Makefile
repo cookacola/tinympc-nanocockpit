@@ -21,6 +21,14 @@ APP = pulp_frontnet
 
 APP_CFLAGS  += -I$(CURDIR) -I$(CURDIR)/../../lib
 APP_CFLAGS  += -Werror
+FLOW_FEATURE_COUNT ?= 27
+APP_CFLAGS  += -DFLOW_MAX_FEATURES=$(FLOW_FEATURE_COUNT)
+FLOW_BUILD_ID ?= unknown
+APP_CFLAGS  += -DFLOW_BUILD_ID=\"$(FLOW_BUILD_ID)\"
+CAMERA_FRAME_RATE_HZ ?= 30
+PIPELINE_PERIOD_US ?= 65000
+APP_CFLAGS  += -DHIMAX_FRAME_RATE=$(CAMERA_FRAME_RATE_HZ).0f
+APP_CFLAGS  += -DVISION_PERIOD_US=$(PIPELINE_PERIOD_US)u
 
 # -O2 with -fno-indirect-inlining is just as fast as -O3 and reduces code size considerably
 # by not inlining of small functions in the management code

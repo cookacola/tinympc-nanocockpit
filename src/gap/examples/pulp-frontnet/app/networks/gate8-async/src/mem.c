@@ -57,7 +57,15 @@ void mem_init() {
   fs_conf.fs.flash = &flash;
   pi_open_from_conf(&fs, &fs_conf);
   if (pi_fs_mount(&fs)) {
-    printf("ERROR: Cannot mount filesystem! Exiting...\n");
+    uint32_t flash_words[3] = {0};
+    pi_flash_read(&flash, 0, &flash_words[0], sizeof(flash_words[0]));
+    if (flash_words[0] < (64u * 1024u * 1024u) - 8u) {
+      pi_flash_read(&flash, flash_words[0], &flash_words[1],
+                    2u * sizeof(flash_words[0]));
+    }
+    printf("ERROR: Cannot mount filesystem: word0=0x%08lx"
+           " table=0x%08lx/0x%08lx\n",
+           flash_words[0], flash_words[1], flash_words[2]);
     pmsis_exit(-2);
   }
 
