@@ -71,6 +71,10 @@
 // is serialized in main.c so the two producers cannot overlap DMA requests.
 #define FLOW_OBSTACLE_ENABLE
 
+// Execute the real CNN graph with uninitialized weights for timing only.
+// Predictions are invalid. Never enable in a deployable image.
+// #define CNN_TIMING_NO_WEIGHTS
+
 // Camera-only optical-flow isolation test. This skips gate8 inference.
 // #define FLOW_OBSTACLE_CAMERA_TEST
 

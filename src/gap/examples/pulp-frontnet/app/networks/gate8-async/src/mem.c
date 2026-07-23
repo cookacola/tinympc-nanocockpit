@@ -69,6 +69,15 @@ void mem_init() {
   }
 }
 
+void mem_init_ram_only() {
+  ram_conf_init(&ram_conf);
+  pi_open_from_conf(&ram, &ram_conf);
+  if (pi_ram_open(&ram)) {
+    printf("ERROR: Cannot open ram! Exiting...\n");
+    pmsis_exit(-3);
+  }
+}
+
 struct pi_device *get_ram_ptr() {
  return &ram;
 }

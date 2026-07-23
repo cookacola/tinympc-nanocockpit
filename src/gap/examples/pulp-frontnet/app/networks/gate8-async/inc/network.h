@@ -31,6 +31,7 @@ struct network_run_token {
 
 void network_terminate();
 void network_initialize();
+void network_initialize_timing_only();
 void network_run_cluster(void * args);
 struct network_run_token network_run_async(void *l2_buffer, size_t l2_buffer_size, void *l2_final_output, int exec, int initial_dir);
 void network_run_wait(struct network_run_token token);

@@ -82,6 +82,19 @@ void network_initialize() {
   }
 }
 
+void network_initialize_timing_only() {
+  L3_weights = ram_malloc(L3_WEIGHTS_SIZE);
+  L3_input = ram_malloc(L3_INPUT_SIZE);
+  L3_output = ram_malloc(L3_OUTPUT_SIZE);
+
+  int weight_index = 0;
+  for (int layer = 0; layer < 9; layer++) {
+    if (layer_with_weights[layer]) {
+      L3_weights_size[weight_index++] = weights_size[layer];
+    }
+  }
+}
+
 /* Remove RAM memory */
 void network_terminate() {
   ram_free(L3_weights, L3_WEIGHTS_SIZE);

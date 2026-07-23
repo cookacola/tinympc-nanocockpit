@@ -89,8 +89,12 @@ static PI_FC_L1 uint32_t uart_queued_count = 0;
 static PI_FC_L1 uint32_t uart_completed_count = 0;
 /* GAP SDK 3.8's asynchronous UART completion has no transfer-status result. */
 static PI_FC_L1 uint32_t uart_error_count = 0;
+static PI_FC_L1 volatile bool uart_tx_busy = false;
+static PI_FC_L1 volatile bool uart_tx_is_flow = false;
 static PI_FC_L1 uint32_t cnn_invocation_count = 0;
 static PI_FC_L1 uint32_t cnn_completion_count = 0;
+static PI_FC_L1 uint32_t cnn_last_us = 0;
+static PI_FC_L1 uint32_t cnn_max_us = 0;
 static PI_FC_L1 volatile bool inference_busy = false;
 static PI_FC_L1 uint32_t flow_snapshot_count = 0;
 static PI_FC_L1 uint32_t flow_processed_count = 0;
@@ -105,24 +109,29 @@ static PI_FC_L1 co_fn_ctx_t inference_ctx;
 #define FLOW_SECTORS          FLOW_OBS_SECT_MAX
 #define FLOW_HALF_W           (IMG_W / 2)
 #define FLOW_HALF_H           (IMG_H_CAM / 2)
-#define FLOW_MAX_FEATURES     48
+#define FLOW_MAX_FEATURES     27
 #define FLOW_FEATURES_PER_SECTOR (FLOW_MAX_FEATURES / FLOW_SECTORS)
 #define FLOW_FEATURE_STEP     6
 #define FLOW_FEATURE_BORDER   10
+#define FLOW_FEATURE_GRID_W \
+  ((IMG_W - 2 * FLOW_FEATURE_BORDER + FLOW_FEATURE_STEP - 1) / FLOW_FEATURE_STEP)
+#define FLOW_FEATURE_GRID_H \
+  ((IMG_H_CAM - 2 * FLOW_FEATURE_BORDER + FLOW_FEATURE_STEP - 1) / FLOW_FEATURE_STEP)
 #define FLOW_MIN_FEATURE_DIST 8
-#define FLOW_ST_SCORE_THRESH  1200.0f
-#define FLOW_LK_WIN_R         3
-#define FLOW_LK_ITERS         3
+#define FLOW_ST_SCORE_THRESH_PROXY 600u
+#define FLOW_LK_WIN_R         2
+#define FLOW_LK_ITERS         1
 #define FLOW_LK_ERR_THRESH    18.0f
 #define FLOW_MIN_SAMPLES      2
 #define FLOW_FX_PX            89.15584f
 #define FLOW_CX_PX            81.10381f
 #define FLOW_MIN_DT_S         0.005f
 #define FLOW_MAX_RAD_S        20.0f
-#define FLOW_SEND_PERIOD_US   60000u
+#define VISION_PERIOD_US      65000u
 #define FLOW_SMOOTH_ALPHA     0.35f
 #define FLOW_HOLD_UPDATES     3
 #define FLOW_HOLD_CONF_DECAY  0.60f
+#define DIAGNOSTICS_PERIOD_US 30000000u
 
 typedef struct {
   float x;
@@ -135,6 +144,7 @@ static PI_L2 uint8_t flow_cur_frame[IMG_W * IMG_H_CAM];
 static PI_L2 uint8_t flow_prev_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 uint8_t flow_cur_half[FLOW_HALF_W * FLOW_HALF_H];
 static PI_L2 flow_feature_t flow_features[FLOW_MAX_FEATURES];
+static PI_L2 uint32_t flow_feature_scores[FLOW_FEATURE_GRID_W * FLOW_FEATURE_GRID_H];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
 static PI_L2 flow_obstacle_payload_t flow_tx_payload;
 static PI_FC_L1 bool flow_have_prev = false;
@@ -143,13 +153,68 @@ static PI_FC_L1 volatile bool flow_tx_pending = false;
 static PI_FC_L1 uint32_t cnn_frame_dropped = 0;
 static PI_FC_L1 uint16_t flow_wire_seq = 1;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
-static PI_FC_L1 uint32_t flow_last_snapshot_us = 0;
 static PI_FC_L1 uint32_t flow_prev_ts_us = 0;
 static PI_FC_L1 float flow_smooth_x[FLOW_SECTORS];
 static PI_FC_L1 float flow_smooth_y[FLOW_SECTORS];
 static PI_FC_L1 float flow_smooth_conf[FLOW_SECTORS];
 static PI_FC_L1 uint8_t flow_hold_count[FLOW_SECTORS];
 static PI_FC_L1 bool flow_filter_initialized = false;
+
+typedef struct {
+  uint32_t sequence;
+  uint32_t frame_ts_us;
+  uint32_t frame_dt_us;
+  uint32_t total_us;
+  uint32_t pyramid_us;
+  uint32_t select_us;
+  uint32_t track_us;
+  uint32_t aggregate_us;
+  uint32_t corner_max_score;
+  uint16_t selected;
+  uint16_t accepted;
+  uint16_t rejected;
+  uint16_t mean_error_milli;
+  uint16_t max_error_milli;
+  uint16_t valid_sector_mask;
+} flow_diagnostics_t;
+
+static PI_FC_L1 flow_diagnostics_t flow_diag;
+
+typedef struct {
+  uint32_t count;
+  uint64_t total_sum_us;
+  uint64_t total_sum_sq_us;
+  uint32_t total_min_us;
+  uint32_t total_max_us;
+  uint64_t track_sum_us;
+  uint64_t track_sum_sq_us;
+  uint32_t track_min_us;
+  uint32_t track_max_us;
+  uint64_t dt_sum_us;
+  uint64_t dt_sum_sq_us;
+  uint32_t dt_min_us;
+  uint32_t dt_max_us;
+  uint32_t selected_sum;
+  uint32_t selected_sum_sq;
+  uint32_t accepted_sum;
+  uint32_t accepted_sum_sq;
+  uint32_t error_sum_milli;
+  uint64_t error_sum_sq_milli;
+  uint32_t error_min_milli;
+  uint32_t error_max_milli;
+  uint32_t error_count;
+  uint32_t valid_sector_sum;
+  uint32_t valid_sector_sum_sq;
+} flow_profile_t;
+
+static PI_FC_L1 flow_profile_t flow_profile;
+static PI_FC_L1 bool flow_profile_skip_next = false;
+static PI_FC_L1 uint32_t cnn_profile_count = 0;
+static PI_FC_L1 uint64_t cnn_profile_sum_us = 0;
+static PI_FC_L1 uint64_t cnn_profile_sum_sq_us = 0;
+static PI_FC_L1 uint32_t cnn_profile_min_us = UINT32_MAX;
+static PI_FC_L1 uint32_t cnn_profile_max_us = 0;
+static PI_FC_L1 bool cnn_profile_skip_next = false;
 
 static inline float f_abs(float v) {
   return v < 0.0f ? -v : v;
@@ -188,7 +253,7 @@ static void build_half_pyramid(const uint8_t *src, uint8_t *dst) {
   }
 }
 
-static float shi_tomasi_score(const uint8_t *img, int w, int x, int y) {
+static uint32_t corner_score_proxy(const uint8_t *img, int w, int x, int y) {
   int sxx = 0;
   int syy = 0;
   int sxy = 0;
@@ -204,39 +269,56 @@ static float shi_tomasi_score(const uint8_t *img, int w, int x, int y) {
     }
   }
 
-  float trace = (float)(sxx + syy);
-  float diff = (float)(sxx - syy);
-  float sxyf = (float)sxy;
-  float disc = sqrtf(diff * diff + 4.0f * sxyf * sxyf);
-  return 0.5f * (trace - disc);
-}
-
-static bool feature_far_enough(const flow_feature_t *features, int n, float x, float y) {
-  for (int i = 0; i < n; i++) {
-    float dx = features[i].x - x;
-    float dy = features[i].y - y;
-    if (dx * dx + dy * dy < (float)(FLOW_MIN_FEATURE_DIST * FLOW_MIN_FEATURE_DIST)) {
-      return false;
-    }
+  /*
+   * det / trace is a monotonic, conservative approximation of the smaller
+   * structure-tensor eigenvalue. Dividing by the highest power of two below
+   * trace avoids both GAP8 software floating point and integer division.
+   */
+  const uint32_t trace = (uint32_t)(sxx + syy);
+  const int64_t det = (int64_t)sxx * (int64_t)syy -
+                      (int64_t)sxy * (int64_t)sxy;
+  if (trace == 0u || det <= 0) {
+    return 0u;
   }
-  return true;
+  const uint32_t shift = 31u - (uint32_t)__builtin_clz(trace);
+  return (uint32_t)((uint64_t)det >> shift);
 }
 
 static int select_shi_tomasi_features(const uint8_t *img, flow_feature_t *features) {
+  /* Score each grid point once. The previous implementation recomputed the
+   * same 5x5 structure tensor for every requested slot in a sector. */
+  int grid_i = 0;
+  uint32_t max_score = 0;
+  for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER;
+       y += FLOW_FEATURE_STEP) {
+    for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER;
+         x += FLOW_FEATURE_STEP) {
+      const uint32_t score = corner_score_proxy(img, IMG_W, x, y);
+      flow_feature_scores[grid_i++] = score;
+      if (score > max_score) {
+        max_score = score;
+      }
+    }
+  }
+  flow_diag.corner_max_score = max_score;
+
   int n = 0;
   for (int sector = 0; sector < FLOW_SECTORS; sector++) {
     const int x0 = sector * IMG_W / FLOW_SECTORS;
     const int x1 = (sector + 1) * IMG_W / FLOW_SECTORS;
     for (int slot = 0; slot < FLOW_FEATURES_PER_SECTOR && n < FLOW_MAX_FEATURES; slot++) {
-      float best_score = FLOW_ST_SCORE_THRESH;
+      uint32_t best_score = FLOW_ST_SCORE_THRESH_PROXY;
       int best_x = -1;
       int best_y = -1;
-      for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER; y += FLOW_FEATURE_STEP) {
-        for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER; x += FLOW_FEATURE_STEP) {
-          if (x < x0 || x >= x1 || !feature_far_enough(features, n, (float)x, (float)y)) {
+      int score_i = 0;
+      for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER;
+           y += FLOW_FEATURE_STEP) {
+        for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER;
+             x += FLOW_FEATURE_STEP, score_i++) {
+          if (x < x0 || x >= x1) {
             continue;
           }
-          float score = shi_tomasi_score(img, IMG_W, x, y);
+          uint32_t score = flow_feature_scores[score_i];
           if (score > best_score) {
             best_score = score;
             best_x = x;
@@ -249,8 +331,27 @@ static int select_shi_tomasi_features(const uint8_t *img, flow_feature_t *featur
       }
       features[n].x = (float)best_x;
       features[n].y = (float)best_y;
-      features[n].score = best_score;
+      features[n].score = (float)best_score;
       n++;
+
+      /*
+       * Suppress neighboring grid candidates once, using integer coordinates.
+       * This is equivalent to checking every candidate against every prior
+       * feature, but avoids the repeated software floating-point work.
+       */
+      score_i = 0;
+      for (int y = FLOW_FEATURE_BORDER; y < IMG_H_CAM - FLOW_FEATURE_BORDER;
+           y += FLOW_FEATURE_STEP) {
+        const int dy = y - best_y;
+        for (int x = FLOW_FEATURE_BORDER; x < IMG_W - FLOW_FEATURE_BORDER;
+             x += FLOW_FEATURE_STEP, score_i++) {
+          const int dx = x - best_x;
+          if (dx * dx + dy * dy <
+              FLOW_MIN_FEATURE_DIST * FLOW_MIN_FEATURE_DIST) {
+            flow_feature_scores[score_i] = 0u;
+          }
+        }
+      }
     }
   }
   return n;
@@ -282,9 +383,32 @@ static float robust_near_sample(float *values, int n) {
 static bool lk_track_level(const uint8_t *prev, const uint8_t *cur,
                            int w, int h, float px, float py,
                            float *cx, float *cy, float *out_err) {
+  static PI_FC_L1 float patch_i0[(2 * FLOW_LK_WIN_R + 1) *
+                                 (2 * FLOW_LK_WIN_R + 1)];
+  static PI_FC_L1 float patch_ix[(2 * FLOW_LK_WIN_R + 1) *
+                                 (2 * FLOW_LK_WIN_R + 1)];
+  static PI_FC_L1 float patch_iy[(2 * FLOW_LK_WIN_R + 1) *
+                                 (2 * FLOW_LK_WIN_R + 1)];
   if (px < FLOW_LK_WIN_R + 1 || py < FLOW_LK_WIN_R + 1 ||
       px >= w - FLOW_LK_WIN_R - 2 || py >= h - FLOW_LK_WIN_R - 2) {
     return false;
+  }
+
+  /* The reference patch and its gradients are constant across Gauss-Newton
+   * iterations. Cache them once instead of performing five bilinear samples
+   * per pixel on every iteration. */
+  int patch_i = 0;
+  const int pxi = (int)px;
+  const int pyi = (int)py;
+  for (int yy = -FLOW_LK_WIN_R; yy <= FLOW_LK_WIN_R; yy++) {
+    for (int xx = -FLOW_LK_WIN_R; xx <= FLOW_LK_WIN_R; xx++, patch_i++) {
+      const int p = (pyi + yy) * w + pxi + xx;
+      patch_i0[patch_i] = (float)prev[p];
+      patch_ix[patch_i] =
+        0.5f * ((float)prev[p + 1] - (float)prev[p - 1]);
+      patch_iy[patch_i] =
+        0.5f * ((float)prev[p + w] - (float)prev[p - w]);
+    }
   }
 
   for (int iter = 0; iter < FLOW_LK_ITERS; iter++) {
@@ -301,19 +425,15 @@ static bool lk_track_level(const uint8_t *prev, const uint8_t *cur,
     float err = 0.0f;
     int samples = 0;
 
+    patch_i = 0;
     for (int yy = -FLOW_LK_WIN_R; yy <= FLOW_LK_WIN_R; yy++) {
-      for (int xx = -FLOW_LK_WIN_R; xx <= FLOW_LK_WIN_R; xx++) {
-        float qx = px + (float)xx;
-        float qy = py + (float)yy;
+      for (int xx = -FLOW_LK_WIN_R; xx <= FLOW_LK_WIN_R; xx++, patch_i++) {
         float rx = *cx + (float)xx;
         float ry = *cy + (float)yy;
-        float i0 = bilinear_sample(prev, w, h, qx, qy);
         float i1 = bilinear_sample(cur, w, h, rx, ry);
-        float ix = 0.5f * (bilinear_sample(prev, w, h, qx + 1.0f, qy) -
-                           bilinear_sample(prev, w, h, qx - 1.0f, qy));
-        float iy = 0.5f * (bilinear_sample(prev, w, h, qx, qy + 1.0f) -
-                           bilinear_sample(prev, w, h, qx, qy - 1.0f));
-        float it = i0 - i1;
+        float ix = patch_ix[patch_i];
+        float iy = patch_iy[patch_i];
+        float it = patch_i0[patch_i] - i1;
 
         gxx += ix * ix;
         gyy += iy * iy;
@@ -347,6 +467,8 @@ static bool lk_track_level(const uint8_t *prev, const uint8_t *cur,
 static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
                              float x, float y, float *nx, float *ny,
                              float *err) {
+  (void)prev;
+  (void)cur;
   float px_half = x * 0.5f;
   float py_half = y * 0.5f;
   float cx_half = px_half;
@@ -357,9 +479,15 @@ static bool lk_track_pyramid(const uint8_t *prev, const uint8_t *cur,
     return false;
   }
 
+  /*
+   * The half-resolution estimate retains bilinear subpixel precision. A
+   * full-resolution refinement more than doubles FC time and prevents the
+   * 30 Hz camera callback from being serviced, so deployment uses the coarse
+   * estimate directly.
+   */
   *nx = x + 2.0f * (cx_half - px_half);
   *ny = y + 2.0f * (cy_half - py_half);
-  return lk_track_level(prev, cur, IMG_W, IMG_H_CAM, x, y, nx, ny, err);
+  return true;
 }
 
 static void flow_filter_payload(flow_obstacle_payload_t *payload) {
@@ -414,6 +542,13 @@ static void flow_compute_camera_payload(const uint8_t *cur,
   static PI_FC_L1 float flow_samples[FLOW_SECTORS][FLOW_FEATURES_PER_SECTOR];
   static PI_FC_L1 float radial_samples[FLOW_SECTORS][FLOW_FEATURES_PER_SECTOR];
   static PI_FC_L1 int radial_count[FLOW_SECTORS];
+  const uint32_t total_start_us = time_get_us();
+  uint32_t stage_start_us;
+  float accepted_error_sum = 0.0f;
+  float accepted_error_max = 0.0f;
+  int accepted_tracks = 0;
+  int rejected_tracks = 0;
+  int n_features = 0;
 
   memset(payload, 0, sizeof(*payload));
   payload->gap8_ts_us = frame_timestamp;
@@ -436,21 +571,35 @@ static void flow_compute_camera_payload(const uint8_t *cur,
     memset(flow_count, 0, sizeof(flow_count));
     memset(radial_count, 0, sizeof(radial_count));
 
+    stage_start_us = time_get_us();
     build_half_pyramid(cur, flow_cur_half);
-    int n_features = select_shi_tomasi_features(flow_prev_frame, flow_features);
+    flow_diag.pyramid_us = time_get_us() - stage_start_us;
+
+    stage_start_us = time_get_us();
+    n_features = select_shi_tomasi_features(flow_prev_frame, flow_features);
+    flow_diag.select_us = time_get_us() - stage_start_us;
+
+    stage_start_us = time_get_us();
     for (int k = 0; k < n_features; k++) {
       float nx = flow_features[k].x;
       float ny = flow_features[k].y;
       float err = 0.0f;
       if (!lk_track_pyramid(flow_prev_frame, cur, flow_features[k].x, flow_features[k].y,
                             &nx, &ny, &err)) {
+        rejected_tracks++;
         continue;
       }
 
       float dx = nx - flow_features[k].x;
       float dy = ny - flow_features[k].y;
       if (dx * dx + dy * dy < 0.0025f) {
+        rejected_tracks++;
         continue;
+      }
+      accepted_tracks++;
+      accepted_error_sum += err;
+      if (err > accepted_error_max) {
+        accepted_error_max = err;
       }
 
       int sector = ((int)flow_features[k].x * FLOW_SECTORS) / IMG_W;
@@ -471,7 +620,9 @@ static void flow_compute_camera_payload(const uint8_t *cur,
           (q * qdot + p * pdot) / radius2;
       }
     }
+    flow_diag.track_us = time_get_us() - stage_start_us;
 
+    stage_start_us = time_get_us();
     for (int i = 0; i < FLOW_SECTORS; i++) {
       if (flow_count[i] >= FLOW_MIN_SAMPLES) {
         float avg_flow_px = robust_near_sample(flow_samples[i], flow_count[i]);
@@ -497,18 +648,96 @@ static void flow_compute_camera_payload(const uint8_t *cur,
     }
 
     flow_filter_payload(payload);
+    flow_diag.aggregate_us = time_get_us() - stage_start_us;
+  } else {
+    flow_diag.pyramid_us = 0;
+    flow_diag.select_us = 0;
+    flow_diag.track_us = 0;
+    flow_diag.aggregate_us = 0;
+    flow_diag.corner_max_score = 0;
   }
 
   memcpy(flow_prev_frame, cur, IMG_W * IMG_H_CAM);
   build_half_pyramid(flow_prev_frame, flow_prev_half);
   flow_prev_ts_us = frame_timestamp;
   flow_have_prev = true;
+
+  flow_diag.sequence++;
+  flow_diag.frame_ts_us = frame_timestamp;
+  flow_diag.frame_dt_us = (uint32_t)(payload->dt_s * 1000000.0f);
+  flow_diag.total_us = time_get_us() - total_start_us;
+  flow_diag.selected = (uint16_t)n_features;
+  flow_diag.accepted = (uint16_t)accepted_tracks;
+  flow_diag.rejected = (uint16_t)rejected_tracks;
+  flow_diag.mean_error_milli = accepted_tracks > 0 ?
+    (uint16_t)(accepted_error_sum * 1000.0f / (float)accepted_tracks) : 0;
+  flow_diag.max_error_milli = (uint16_t)(accepted_error_max * 1000.0f);
+  flow_diag.valid_sector_mask = 0;
+  for (int i = 0; i < FLOW_SECTORS; i++) {
+    if (payload->sector[i].confidence > 0.0f) {
+      flow_diag.valid_sector_mask |= (uint16_t)(1u << i);
+    }
+  }
+
+  if (flow_profile_skip_next) {
+    flow_profile_skip_next = false;
+  } else if (flow_diag.sequence > 1) {
+    flow_profile.count++;
+    flow_profile.total_sum_us += flow_diag.total_us;
+    flow_profile.total_sum_sq_us +=
+      (uint64_t)flow_diag.total_us * flow_diag.total_us;
+    if (flow_diag.total_us < flow_profile.total_min_us ||
+        flow_profile.total_min_us == 0) {
+      flow_profile.total_min_us = flow_diag.total_us;
+    }
+    if (flow_diag.total_us > flow_profile.total_max_us) {
+      flow_profile.total_max_us = flow_diag.total_us;
+    }
+    flow_profile.track_sum_us += flow_diag.track_us;
+    flow_profile.track_sum_sq_us +=
+      (uint64_t)flow_diag.track_us * flow_diag.track_us;
+    if (flow_diag.track_us < flow_profile.track_min_us ||
+        flow_profile.track_min_us == 0) {
+      flow_profile.track_min_us = flow_diag.track_us;
+    }
+    if (flow_diag.track_us > flow_profile.track_max_us) {
+      flow_profile.track_max_us = flow_diag.track_us;
+    }
+    flow_profile.dt_sum_us += flow_diag.frame_dt_us;
+    flow_profile.dt_sum_sq_us +=
+      (uint64_t)flow_diag.frame_dt_us * flow_diag.frame_dt_us;
+    if (flow_diag.frame_dt_us < flow_profile.dt_min_us ||
+        flow_profile.dt_min_us == 0) {
+      flow_profile.dt_min_us = flow_diag.frame_dt_us;
+    }
+    if (flow_diag.frame_dt_us > flow_profile.dt_max_us) {
+      flow_profile.dt_max_us = flow_diag.frame_dt_us;
+    }
+    flow_profile.selected_sum += flow_diag.selected;
+    flow_profile.selected_sum_sq += flow_diag.selected * flow_diag.selected;
+    flow_profile.accepted_sum += flow_diag.accepted;
+    flow_profile.accepted_sum_sq += flow_diag.accepted * flow_diag.accepted;
+    if (flow_diag.accepted > 0) {
+      flow_profile.error_sum_milli += flow_diag.mean_error_milli;
+      flow_profile.error_sum_sq_milli +=
+        (uint64_t)flow_diag.mean_error_milli * flow_diag.mean_error_milli;
+      if (flow_diag.mean_error_milli < flow_profile.error_min_milli ||
+          flow_profile.error_min_milli == 0) {
+        flow_profile.error_min_milli = flow_diag.mean_error_milli;
+      }
+      if (flow_diag.mean_error_milli > flow_profile.error_max_milli) {
+        flow_profile.error_max_milli = flow_diag.mean_error_milli;
+      }
+      flow_profile.error_count++;
+    }
+    const uint32_t valid_sectors =
+      (uint32_t)__builtin_popcount((unsigned)flow_diag.valid_sector_mask);
+    flow_profile.valid_sector_sum += valid_sectors;
+    flow_profile.valid_sector_sum_sq += valid_sectors * valid_sectors;
+  }
 }
 
 static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
-  if (camera_frame->frame_timestamp - flow_last_snapshot_us < FLOW_SEND_PERIOD_US) {
-    return;
-  }
   if (flow_snapshot_pending) {
     flow_snapshot_dropped++;
     return;
@@ -516,13 +745,12 @@ static void flow_snapshot_frame_from_callback(const frame_t *camera_frame) {
 
   memcpy(flow_cur_frame, camera_frame->buffer, IMG_W * IMG_H_CAM);
   flow_snapshot_ts_us = camera_frame->frame_timestamp;
-  flow_last_snapshot_us = camera_frame->frame_timestamp;
   flow_snapshot_count++;
   flow_snapshot_pending = true;
 }
 
 static void flow_background_poll(void) {
-  if (!flow_snapshot_pending || inference_busy) {
+  if (!flow_snapshot_pending) {
     return;
   }
 
@@ -547,28 +775,45 @@ static void flow_background_poll(void) {
 
 #endif
 
+static void vision_uart_done(void *arg) {
+  (void)arg;
+  uart_completed_count++;
+#if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
+  if (uart_tx_is_flow) {
+    flow_transmitted_count++;
+  }
+#endif
+  uart_tx_busy = false;
+}
+
 static void vision_uart_service(void) {
   static pi_task_t done_task;
 
-  /* One owner for the UART DMA. Gate packets are short and latency-sensitive;
-   * flow follows immediately. At 115200 baud both fit inside one 30 Hz frame. */
+  /* Keep serialization off the camera/compute event loop. The L2 transmit
+   * buffers remain owned by UART until this completion callback runs. */
+  if (uart_tx_busy) {
+    return;
+  }
+
   if (gate8_tx_pending) {
     memcpy(&gate8_uart_msg, &gate8_tx_msg, sizeof(gate8_uart_msg));
     gate8_tx_pending = false;
+    uart_tx_is_flow = false;
+    uart_tx_busy = true;
     uart_queued_count++;
     uart_write_async(&uart, &gate8_uart_msg, sizeof(gate8_uart_msg),
-                     pi_task_block(&done_task));
-    pi_task_wait_on(&done_task);
-    uart_completed_count++;
+                     pi_task_callback(&done_task, vision_uart_done, NULL));
+    return;
   }
 #if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
   if (flow_tx_pending) {
     flow_tx_pending = false;
+    uart_tx_is_flow = true;
+    uart_tx_busy = true;
     uart_queued_count++;
-    flow_obstacle_send_async(&uart, &flow_tx_payload, pi_task_block(&done_task));
-    pi_task_wait_on(&done_task);
-    uart_completed_count++;
-    flow_transmitted_count++;
+    flow_obstacle_send_async(
+      &uart, &flow_tx_payload,
+      pi_task_callback(&done_task, vision_uart_done, NULL));
   }
 #endif
 }
@@ -629,26 +874,40 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 #ifdef CAMERA_CAPTURE_TEST_ONLY
   (void)camera_frame;
 #elif defined(FLOW_OBSTACLE_CAMERA_TEST)
-  flow_snapshot_frame_from_callback(camera_frame);
+  static PI_FC_L1 uint32_t next_flow_ts_us = 0;
+  if (next_flow_ts_us == 0 ||
+      (int32_t)(camera_frame->frame_timestamp - next_flow_ts_us) >= 0) {
+    if (next_flow_ts_us == 0) {
+      next_flow_ts_us = camera_frame->frame_timestamp;
+    }
+    do {
+      next_flow_ts_us += VISION_PERIOD_US;
+    } while ((int32_t)(camera_frame->frame_timestamp - next_flow_ts_us) >= 0);
+    flow_snapshot_frame_from_callback(camera_frame);
+  }
 #elif defined(FLOW_OBSTACLE_ENABLE)
-  /* Alternate camera frames: flow at 15 Hz, CNN at 15 Hz. Before handing an
-   * FC frame to flow, wait for the previous cluster inference. If flow ever
-   * overruns its 66.7 ms slot, preserve obstacle sensing and drop the CNN
-   * frame instead of running both algorithms concurrently. */
-  const bool is_flow_frame = (camera_frame->sequence_id & 1u) == 0u;
-  if (is_flow_frame) {
+  /*
+   * Select frames on an accumulated 15 Hz deadline. Acquired camera frames
+   * are not perfectly periodic, so parity-based alternation undersampled both
+   * workloads. LK runs on the FC while CNN inference runs on the cluster.
+   */
+  static PI_FC_L1 uint32_t next_vision_ts_us = 0;
+  if (next_vision_ts_us == 0 ||
+      (int32_t)(camera_frame->frame_timestamp - next_vision_ts_us) >= 0) {
+    if (next_vision_ts_us == 0) {
+      next_vision_ts_us = camera_frame->frame_timestamp;
+    }
+    do {
+      next_vision_ts_us += VISION_PERIOD_US;
+    } while ((int32_t)(camera_frame->frame_timestamp - next_vision_ts_us) >= 0);
+
     if (started) {
       while (!co_event_is_done(&inference_done)) {
         CO_WAIT(&inference_done);
       }
     }
     flow_snapshot_frame_from_callback(camera_frame);
-  } else if (flow_snapshot_pending) {
-    cnn_frame_dropped++;
-  } else {
     resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
-    /* This legacy field is the only v1 packet sequence slot. A GAP8 camera
-     * timestamp lets STM32 reject duplicated frames without changing layout. */
     iargs.stm32_timestamp = camera_frame->frame_timestamp;
     inference_busy = true;
     co_fn_push_start(&inference_ctx, inference_task, &iargs,
@@ -675,12 +934,31 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
 {
   static PI_FC_L1 co_event_t done;
   static PI_FC_L1 float corners[N_CORNERS];
+  static PI_FC_L1 uint32_t inference_start_us;
 
   trace_set(TRACE_USER_0, true);
   cnn_invocation_count++;
+  inference_start_us = time_get_us();
   network_run_async_cl(l2_buffer, l2_buffer_size, l2_buffer, 0, 1, &cluster, co_event_init(&done));
   CO_WAIT(&done);
+  cnn_last_us = time_get_us() - inference_start_us;
+  if (cnn_last_us > cnn_max_us) {
+    cnn_max_us = cnn_last_us;
+  }
   cnn_completion_count++;
+  if (cnn_profile_skip_next) {
+    cnn_profile_skip_next = false;
+  } else if (cnn_completion_count > 1) {
+    cnn_profile_count++;
+    cnn_profile_sum_us += cnn_last_us;
+    cnn_profile_sum_sq_us += (uint64_t)cnn_last_us * cnn_last_us;
+    if (cnn_last_us < cnn_profile_min_us) {
+      cnn_profile_min_us = cnn_last_us;
+    }
+    if (cnn_last_us > cnn_profile_max_us) {
+      cnn_profile_max_us = cnn_last_us;
+    }
+  }
   trace_set(TRACE_USER_0, false);
 
   const int32_t *raw = (const int32_t *) l2_buffer;
@@ -731,17 +1009,33 @@ static const char *camera_stage_name(camera_stage_e stage) {
   }
 }
 
+static uint32_t profile_stddev(uint64_t sum, uint64_t sum_sq, uint32_t count) {
+  if (count == 0) {
+    return 0;
+  }
+  const float mean = (float)sum / (float)count;
+  const float mean_sq = (float)sum_sq / (float)count;
+  const float variance = mean_sq > mean * mean ?
+    mean_sq - mean * mean : 0.0f;
+  return (uint32_t)(sqrtf(variance) + 0.5f);
+}
+
 static void diagnostics_heartbeat(void) {
   static PI_FC_L1 uint32_t last_print_us = 0;
+  static PI_FC_L1 uint32_t last_flow_diag_sequence = 0;
   const uint32_t now = time_get_us();
-  if (now - last_print_us < 1000000u) {
+  if (now - last_print_us < DIAGNOSTICS_PERIOD_US) {
+    return;
+  }
+  if (inference_busy || uart_tx_busy || flow_snapshot_pending) {
     return;
   }
   last_print_us = now;
 
-  printf("hb cam=%lu hw=%u stage=%s age_ms=%lu rec=%lu i2c=%lu"
+  printf("hb t_us=%lu cam=%lu hw=%u stage=%s age_ms=%lu rec=%lu i2c=%lu"
          " flow=%lu/%lu/%lu fd=%lu/%lu"
-         " uart=%lu/%lu/%lu cnn=%lu/%lu\n",
+         " uart=%lu/%lu/%lu cnn=%lu/%lu/%lu/%lu\n",
+         now,
          camera_get_completed_capture_count(&camera),
          camera_get_hardware_frame_count(&camera),
          camera_stage_name(camera.stage),
@@ -751,7 +1045,67 @@ static void diagnostics_heartbeat(void) {
          flow_snapshot_count, flow_processed_count, flow_transmitted_count,
          flow_snapshot_dropped, flow_tx_dropped,
          uart_queued_count, uart_completed_count, uart_error_count,
-         cnn_invocation_count, cnn_completion_count);
+         cnn_invocation_count, cnn_completion_count, cnn_last_us, cnn_max_us);
+#if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
+  if (flow_diag.sequence != last_flow_diag_sequence) {
+    last_flow_diag_sequence = flow_diag.sequence;
+    printf("flowdiag,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%u,%u,%u,%u,%u,0x%03x\n",
+           flow_diag.sequence, flow_diag.frame_ts_us, flow_diag.frame_dt_us,
+           flow_diag.total_us, flow_diag.pyramid_us, flow_diag.select_us,
+           flow_diag.track_us, flow_diag.aggregate_us,
+           flow_diag.corner_max_score,
+           (unsigned)flow_diag.selected, (unsigned)flow_diag.accepted,
+           (unsigned)flow_diag.rejected, (unsigned)flow_diag.mean_error_milli,
+           (unsigned)flow_diag.max_error_milli,
+           (unsigned)flow_diag.valid_sector_mask);
+  }
+  if (flow_profile.count > 0 && cnn_profile_count > 0) {
+    printf("profile,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,"
+           "%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+           flow_profile.count,
+           (uint32_t)(flow_profile.total_sum_us / flow_profile.count),
+           profile_stddev(flow_profile.total_sum_us,
+                          flow_profile.total_sum_sq_us, flow_profile.count),
+           flow_profile.total_min_us, flow_profile.total_max_us,
+           (uint32_t)(flow_profile.track_sum_us / flow_profile.count),
+           profile_stddev(flow_profile.track_sum_us,
+                          flow_profile.track_sum_sq_us, flow_profile.count),
+           flow_profile.track_min_us, flow_profile.track_max_us,
+           (uint32_t)(flow_profile.dt_sum_us / flow_profile.count),
+           profile_stddev(flow_profile.dt_sum_us,
+                          flow_profile.dt_sum_sq_us, flow_profile.count),
+           flow_profile.dt_min_us, flow_profile.dt_max_us,
+           flow_profile.selected_sum / flow_profile.count,
+           profile_stddev(flow_profile.selected_sum,
+                          flow_profile.selected_sum_sq, flow_profile.count),
+           flow_profile.accepted_sum / flow_profile.count,
+           profile_stddev(flow_profile.accepted_sum,
+                          flow_profile.accepted_sum_sq, flow_profile.count),
+           flow_profile.error_count > 0 ?
+             flow_profile.error_sum_milli / flow_profile.error_count : 0,
+           profile_stddev(flow_profile.error_sum_milli,
+                          flow_profile.error_sum_sq_milli,
+                          flow_profile.error_count),
+           flow_profile.error_min_milli, flow_profile.error_max_milli,
+           flow_profile.valid_sector_sum / flow_profile.count,
+           profile_stddev(flow_profile.valid_sector_sum,
+                          flow_profile.valid_sector_sum_sq,
+                          flow_profile.count),
+           cnn_profile_count,
+           (uint32_t)(cnn_profile_sum_us / cnn_profile_count),
+           profile_stddev(cnn_profile_sum_us,
+                          cnn_profile_sum_sq_us, cnn_profile_count),
+           cnn_profile_min_us, cnn_profile_max_us);
+  }
+  memset(&flow_profile, 0, sizeof(flow_profile));
+  flow_profile_skip_next = true;
+  cnn_profile_count = 0;
+  cnn_profile_sum_us = 0;
+  cnn_profile_sum_sq_us = 0;
+  cnn_profile_min_us = UINT32_MAX;
+  cnn_profile_max_us = 0;
+  cnn_profile_skip_next = true;
+#endif
 }
 
 static void main_task(void) {
@@ -766,8 +1120,14 @@ static void main_task(void) {
 #if !defined(FLOW_OBSTACLE_CAMERA_TEST) && !defined(CAMERA_CAPTURE_TEST_ONLY)
   cluster_init(&cluster);
 
+#ifdef CNN_TIMING_NO_WEIGHTS
+  printf("WARNING: CNN timing-only mode; predictions are invalid\n");
+  mem_init_ram_only();
+  network_initialize_timing_only();
+#else
   mem_init();
   network_initialize();
+#endif
 
   l2_buffer_size = L2_BUF_SIZE;
   l2_buffer = pi_l2_malloc(l2_buffer_size);

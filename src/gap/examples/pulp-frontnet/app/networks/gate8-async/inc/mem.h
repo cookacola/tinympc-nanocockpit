@@ -4,6 +4,7 @@
 #include<stddef.h>
 
 void  mem_init();
+void  mem_init_ram_only();
 struct pi_device *get_ram_ptr();
 void *ram_malloc(size_t size);
 void  ram_free(void *ptr, size_t size);

@@ -1,0 +1,95 @@
+{
+  "hardware": {
+    "soc": "GAP8",
+    "fc_mhz": 246,
+    "cluster_mhz": 175,
+    "camera": "Himax 160x160 grayscale",
+    "camera_configured_fps": 30,
+    "cnn_weights": "real flashed gate8 weights"
+  },
+  "scheduler": {
+    "deadline_us": 65000,
+    "measured_combined_hz": 15.051463183704806,
+    "camera_capture_hz": 29.337033329300741,
+    "flow_snapshot_drops": 0,
+    "flow_tx_drops": 0,
+    "uart_errors": 0
+  },
+  "steady_state": {
+    "samples": 451,
+    "flow_total_us": {
+      "mean": 17182,
+      "stddev": 80,
+      "min": 16754,
+      "max": 17334
+    },
+    "flow_tracking_us": {
+      "mean": 10979,
+      "stddev": 70,
+      "min": 10559,
+      "max": 11078
+    },
+    "cnn_us": {
+      "mean": 50720,
+      "stddev": 91,
+      "min": 50385,
+      "max": 50965
+    },
+    "frame_dt_us": {
+      "mean": 64920,
+      "stddev": 7669,
+      "min": 24537,
+      "max": 90362
+    },
+    "selected_tracks": {
+      "mean": 26,
+      "stddev": 0
+    },
+    "accepted_tracks": {
+      "mean": 19,
+      "stddev": 3
+    },
+    "photometric_residual_intensity": {
+      "mean": 4.977,
+      "stddev": 1.985,
+      "min": 0.997,
+      "max": 11.946
+    },
+    "valid_sectors": {
+      "mean": 7,
+      "stddev_rounded": 1
+    }
+  },
+  "simulation_guidance": {
+    "replace_fixed_cnn_runtime_ms_with": {
+      "distribution": "clipped_normal",
+      "mean": 50.720,
+      "stddev": 0.091,
+      "min": 50.385,
+      "max": 50.965
+    },
+    "replace_fixed_flow_runtime_ms_with": {
+      "distribution": "clipped_normal",
+      "mean": 17.182,
+      "stddev": 0.080,
+      "min": 16.754,
+      "max": 17.334
+    },
+    "use_measured_frame_dt_ms": {
+      "mean": 64.920,
+      "stddev": 7.669,
+      "min": 24.537,
+      "max": 90.362
+    },
+    "accepted_track_model": {
+      "selected_mean": 26,
+      "accepted_mean": 19,
+      "accepted_stddev": 3
+    }
+  },
+  "limitations": [
+    "Photometric residual is an LK brightness-constancy residual, not ground-truth pixel displacement error.",
+    "The scene and motion represented by this bench window should be recorded separately when fitting scenario-specific perception noise.",
+    "The first sample after each JTAG diagnostic print is excluded from aggregate profiles."
+  ]
+}
