@@ -207,6 +207,7 @@ typedef struct {
   float ny;
   float lk_error;
   float fb_error;
+  float score;
 } flow_track_debug_t;
 
 static PI_L2 uint8_t flow_prev_frame[IMG_W * IMG_H_CAM];
@@ -220,9 +221,12 @@ static PI_FC_L1 bool flow_debug_pair_dumped = false;
 static PI_L2 uint32_t flow_feature_scores[FLOW_FEATURE_GRID_W * FLOW_FEATURE_GRID_H];
 static PI_L2 flow_obstacle_payload_t flow_camera_payload;
 static PI_L2 flow_obstacle_payload_t flow_tx_payload;
+static PI_L2 flow_track_payload_t flow_track_camera_payload;
+static PI_L2 flow_track_payload_t flow_track_tx_payload;
 static PI_FC_L1 bool flow_have_prev = false;
 static volatile bool flow_snapshot_pending = false;
 static PI_FC_L1 volatile bool flow_tx_pending = false;
+static PI_FC_L1 volatile bool flow_track_tx_pending = false;
 static PI_FC_L1 uint32_t cnn_frame_dropped = 0;
 static PI_FC_L1 uint16_t flow_wire_seq = 1;
 static PI_FC_L1 uint32_t flow_snapshot_ts_us = 0;
@@ -254,6 +258,89 @@ static void flow_undistort_normalized(float u, float v,
   }
   *x_out = x;
   *y_out = y;
+}
+
+static uint16_t flow_quantize_uq(float value, float scale) {
+  float scaled = value * scale;
+  if (scaled <= 0.0f) return 0;
+  if (scaled >= 65535.0f) return 65535;
+  return (uint16_t)(scaled + 0.5f);
+}
+
+static int16_t flow_quantize_sq(float value, float scale) {
+  float scaled = value * scale;
+  if (scaled <= -32768.0f) return -32768;
+  if (scaled >= 32767.0f) return 32767;
+  return (int16_t)(scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f);
+}
+
+static void flow_make_track_payload(uint32_t frame_timestamp,
+                                    uint32_t stm32_ts_echo,
+                                    float dt_s,
+                                    uint8_t flags) {
+  memset(&flow_track_camera_payload, 0, sizeof(flow_track_camera_payload));
+  flow_track_camera_payload.gap8_ts_us = frame_timestamp;
+  flow_track_camera_payload.stm32_ts_echo = stm32_ts_echo;
+  const float dt_us = dt_s * 1000000.0f;
+  flow_track_camera_payload.dt_us =
+      dt_us >= 65535.0f ? 65535u : (uint16_t)(dt_us + 0.5f);
+  flow_track_camera_payload.version = FLOW_TRACK_WIRE_VERSION;
+  flow_track_camera_payload.flags = flags;
+
+  /* Keep spatial coverage when a 36-feature build exceeds the 32-track wire
+   * bound. First retain the four strongest tracks in each of eight columns,
+   * then use any remaining slots for the strongest unselected tracks. */
+  uint8_t selected[FLOW_MAX_FEATURES] = {0};
+  int selected_count = 0;
+  for (int band = 0; band < 8 && selected_count < FLOW_TRACK_MAX; band++) {
+    for (int slot = 0; slot < 4 && selected_count < FLOW_TRACK_MAX; slot++) {
+      int best = -1;
+      float best_score = -1.0f;
+      for (int i = 0; i < flow_debug_track_count; i++) {
+        const int track_band =
+            ((int)flow_debug_tracks[i].x * 8) / IMG_W;
+        if (!selected[i] && track_band == band &&
+            flow_debug_tracks[i].score > best_score) {
+          best = i;
+          best_score = flow_debug_tracks[i].score;
+        }
+      }
+      if (best < 0) break;
+      selected[best] = 1;
+      flow_track_wire_t *wire =
+          &flow_track_camera_payload.track[selected_count++];
+      const flow_track_debug_t *track = &flow_debug_tracks[best];
+      wire->u_q4 = flow_quantize_uq(track->x, 16.0f);
+      wire->v_q4 = flow_quantize_uq(track->y, 16.0f);
+      wire->du_q8 = flow_quantize_sq(track->nx - track->x, 256.0f);
+      wire->dv_q8 = flow_quantize_sq(track->ny - track->y, 256.0f);
+      wire->lk_err_q8 = flow_quantize_uq(track->lk_error, 256.0f);
+      wire->fb_err_q8 = flow_quantize_uq(track->fb_error, 256.0f);
+    }
+  }
+  while (selected_count < FLOW_TRACK_MAX &&
+         selected_count < flow_debug_track_count) {
+    int best = -1;
+    float best_score = -1.0f;
+    for (int i = 0; i < flow_debug_track_count; i++) {
+      if (!selected[i] && flow_debug_tracks[i].score > best_score) {
+        best = i;
+        best_score = flow_debug_tracks[i].score;
+      }
+    }
+    if (best < 0) break;
+    selected[best] = 1;
+    flow_track_wire_t *wire =
+        &flow_track_camera_payload.track[selected_count++];
+    const flow_track_debug_t *track = &flow_debug_tracks[best];
+    wire->u_q4 = flow_quantize_uq(track->x, 16.0f);
+    wire->v_q4 = flow_quantize_uq(track->y, 16.0f);
+    wire->du_q8 = flow_quantize_sq(track->nx - track->x, 256.0f);
+    wire->dv_q8 = flow_quantize_sq(track->ny - track->y, 256.0f);
+    wire->lk_err_q8 = flow_quantize_uq(track->lk_error, 256.0f);
+    wire->fb_err_q8 = flow_quantize_uq(track->fb_error, 256.0f);
+  }
+  flow_track_camera_payload.count = (uint8_t)selected_count;
 }
 
 typedef struct {
@@ -790,6 +877,9 @@ static void flow_compute_camera_payload(const uint8_t *cur,
         rejected_tracks++;
         continue;
       }
+      const float fb_geometric_error = sqrtf(
+          (bx - flow_features[k].x) * (bx - flow_features[k].x) +
+          (by - flow_features[k].y) * (by - flow_features[k].y));
 
       float dx = nx - flow_features[k].x;
       float dy = ny - flow_features[k].y;
@@ -810,7 +900,8 @@ static void flow_compute_camera_payload(const uint8_t *cur,
         track->nx = nx;
         track->ny = ny;
         track->lk_error = err;
-        track->fb_error = fb_err;
+        track->fb_error = fb_geometric_error;
+        track->score = flow_features[k].score;
       }
 
       int sector = ((int)flow_features[k].x * FLOW_SECTORS) / IMG_W;
@@ -876,6 +967,9 @@ static void flow_compute_camera_payload(const uint8_t *cur,
     flow_diag.aggregate_us = 0;
     flow_diag.corner_max_score = 0;
   }
+
+  flow_make_track_payload(frame_timestamp, payload->stm32_ts_echo,
+                          payload->dt_s, payload->flags);
 
 #if FLOW_DIAGNOSTIC_CAPTURE
   if (flow_have_prev && !flow_debug_pair_dumped) {
@@ -988,15 +1082,24 @@ static void flow_background_poll(void) {
   flow_snapshot_pending = false;
 
   if (had_prev) {
+    const uint16_t sequence = flow_wire_seq++;
+    if (flow_wire_seq == 0) {
+      flow_wire_seq = 1;
+    }
     if (flow_tx_pending) {
       flow_tx_dropped++;
     } else {
       memcpy(&flow_tx_payload, &flow_camera_payload, sizeof(flow_tx_payload));
-      flow_tx_payload.reserved = flow_wire_seq++;
-      if (flow_wire_seq == 0) {
-        flow_wire_seq = 1;
-      }
+      flow_tx_payload.reserved = sequence;
       flow_tx_pending = true;
+    }
+    if (flow_track_tx_pending) {
+      flow_tx_dropped++;
+    } else {
+      memcpy(&flow_track_tx_payload, &flow_track_camera_payload,
+             sizeof(flow_track_tx_payload));
+      flow_track_tx_payload.sequence = sequence;
+      flow_track_tx_pending = true;
     }
   }
 }
@@ -1034,6 +1137,16 @@ static void vision_uart_service(void) {
     return;
   }
 #if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
+  if (flow_track_tx_pending) {
+    flow_track_tx_pending = false;
+    uart_tx_is_flow = true;
+    uart_tx_busy = true;
+    uart_queued_count++;
+    flow_track_send_async(
+      &uart, &flow_track_tx_payload,
+      pi_task_callback(&done_task, vision_uart_done, NULL));
+    return;
+  }
   if (flow_tx_pending) {
     flow_tx_pending = false;
     uart_tx_is_flow = true;

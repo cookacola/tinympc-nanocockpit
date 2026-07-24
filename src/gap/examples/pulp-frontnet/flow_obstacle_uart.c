@@ -11,6 +11,7 @@
 #include <string.h>
 
 static PI_L2 flow_obstacle_msg_t s_msg;
+static PI_L2 flow_track_msg_t s_track_msg;
 
 void flow_obstacle_send_async(uart_t *uart,
                               const flow_obstacle_payload_t *payload,
@@ -22,6 +23,20 @@ void flow_obstacle_send_async(uart_t *uart,
   }
   s_msg.checksum = crc32CalculateBuffer(&s_msg, sizeof(s_msg) - sizeof(s_msg.checksum));
   uart_write_async(uart, &s_msg, sizeof(s_msg), done_task);
+}
+
+void flow_track_send_async(uart_t *uart,
+                           const flow_track_payload_t *payload,
+                           pi_task_t *done_task) {
+  memcpy(s_track_msg.header, FLOW_TRACK_MSG_HEADER,
+         sizeof(s_track_msg.header));
+  memcpy(&s_track_msg.p, payload, sizeof(s_track_msg.p));
+  if (s_track_msg.p.count > FLOW_TRACK_MAX) {
+    s_track_msg.p.count = FLOW_TRACK_MAX;
+  }
+  s_track_msg.checksum = crc32CalculateBuffer(
+      &s_track_msg, sizeof(s_track_msg) - sizeof(s_track_msg.checksum));
+  uart_write_async(uart, &s_track_msg, sizeof(s_track_msg), done_task);
 }
 
 void flow_obstacle_make_test_payload(flow_obstacle_payload_t *payload,
