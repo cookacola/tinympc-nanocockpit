@@ -1086,6 +1086,7 @@ static void flow_background_poll(void) {
     if (flow_wire_seq == 0) {
       flow_wire_seq = 1;
     }
+#if FLOW_LEGACY_SECTORS
     if (flow_tx_pending) {
       flow_tx_dropped++;
     } else {
@@ -1093,6 +1094,7 @@ static void flow_background_poll(void) {
       flow_tx_payload.reserved = sequence;
       flow_tx_pending = true;
     }
+#endif
     if (flow_track_tx_pending) {
       flow_tx_dropped++;
     } else {
@@ -1147,6 +1149,7 @@ static void vision_uart_service(void) {
       pi_task_callback(&done_task, vision_uart_done, NULL));
     return;
   }
+#if FLOW_LEGACY_SECTORS
   if (flow_tx_pending) {
     flow_tx_pending = false;
     uart_tx_is_flow = true;
@@ -1156,6 +1159,7 @@ static void vision_uart_service(void) {
       &uart, &flow_tx_payload,
       pi_task_callback(&done_task, vision_uart_done, NULL));
   }
+#endif
 #endif
 }
 
