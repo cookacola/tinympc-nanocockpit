@@ -149,7 +149,7 @@ static uint32_t stm32_tick_at_gap8_time(uint32_t gap8_ts_us) {
 #define FLOW_HALF_W           (IMG_W / 2)
 #define FLOW_HALF_H           (IMG_H_CAM / 2)
 #ifndef FLOW_MAX_FEATURES
-#define FLOW_MAX_FEATURES     27
+#define FLOW_MAX_FEATURES     36
 #endif
 #if (FLOW_MAX_FEATURES != 27) && (FLOW_MAX_FEATURES != 36)
 #error "FLOW_MAX_FEATURES must be the evaluated 27- or 36-feature configuration"
