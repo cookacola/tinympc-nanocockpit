@@ -167,7 +167,7 @@ static uint32_t stm32_tick_at_gap8_time(uint32_t gap8_ts_us) {
 #define FLOW_LK_HALF_ITERS    2
 #define FLOW_LK_FULL_ITERS    1
 #define FLOW_LK_ERR_THRESH    18.0f
-#define FLOW_FB_ERR_THRESH_PX 0.75f
+#define FLOW_FB_ERR_THRESH_PX 1.00f
 #define FLOW_MIN_SAMPLES      2
 #define FLOW_FX_PX            89.15584f
 #define FLOW_FY_PX            89.46082f
