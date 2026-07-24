@@ -38,15 +38,18 @@ void flow_obstacle_make_test_payload(flow_obstacle_payload_t *payload,
   payload->sector[0].azimuth_rad = -0.35f;
   payload->sector[0].flow_x_rad_s = -0.45f;
   payload->sector[0].flow_y_rad_s = 0.0f;
+  payload->sector[0].flow_sigma_rad_s = 0.04f;
   payload->sector[0].confidence = 0.55f;
 
   payload->sector[1].azimuth_rad = 0.0f;
   payload->sector[1].flow_x_rad_s = 0.65f;
   payload->sector[1].flow_y_rad_s = 0.0f;
+  payload->sector[1].flow_sigma_rad_s = 0.04f;
   payload->sector[1].confidence = 0.85f;
 
   payload->sector[2].azimuth_rad = 0.35f;
   payload->sector[2].flow_x_rad_s = 0.40f;
   payload->sector[2].flow_y_rad_s = 0.0f;
+  payload->sector[2].flow_sigma_rad_s = 0.04f;
   payload->sector[2].confidence = 0.50f;
 }

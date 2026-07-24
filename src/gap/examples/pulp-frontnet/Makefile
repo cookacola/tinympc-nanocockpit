@@ -29,6 +29,8 @@ CAMERA_FRAME_RATE_HZ ?= 30
 PIPELINE_PERIOD_US ?= 65000
 APP_CFLAGS  += -DHIMAX_FRAME_RATE=$(CAMERA_FRAME_RATE_HZ).0f
 APP_CFLAGS  += -DVISION_PERIOD_US=$(PIPELINE_PERIOD_US)u
+FLOW_DIAGNOSTIC_CAPTURE ?= 0
+APP_CFLAGS  += -DFLOW_DIAGNOSTIC_CAPTURE=$(FLOW_DIAGNOSTIC_CAPTURE)
 
 # -O2 with -fno-indirect-inlining is just as fast as -O3 and reduces code size considerably
 # by not inlining of small functions in the management code
