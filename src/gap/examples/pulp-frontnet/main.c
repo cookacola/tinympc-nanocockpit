@@ -49,7 +49,9 @@
 
 #define IMG_W        160
 #define IMG_H_CAM    160          // cropped sensor frame from lib/camera
-#ifdef GAP8_MULTITASK_NETWORK
+#ifdef GAP8_STDC_PAIR_NETWORK
+#define IMG_H_NET    120          // center crop used by the STDC real-data model
+#elif defined(GAP8_MULTITASK_NETWORK)
 #define IMG_H_NET    160          // native HM01B0 crop; no deploy resize
 #else
 #define IMG_H_NET    96           // net rows, 15360/160
@@ -1285,7 +1287,10 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
       }
     }
     flow_snapshot_frame_from_callback(camera_frame);
-#ifdef GAP8_MULTITASK_NETWORK
+#ifdef GAP8_STDC_PAIR_NETWORK
+    memcpy(l2_buffer, camera_frame->buffer + 20 * IMG_W,
+           IMG_W * IMG_H_NET);
+#elif defined(GAP8_MULTITASK_NETWORK)
     memcpy(l2_buffer, camera_frame->buffer, IMG_W * IMG_H_NET);
 #else
     resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
@@ -1304,7 +1309,10 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
       CO_WAIT(&inference_done);
     }
   }
-#ifdef GAP8_MULTITASK_NETWORK
+#ifdef GAP8_STDC_PAIR_NETWORK
+  memcpy(l2_buffer, camera_frame->buffer + 20 * IMG_W,
+         IMG_W * IMG_H_NET);
+#elif defined(GAP8_MULTITASK_NETWORK)
   memcpy(l2_buffer, camera_frame->buffer, IMG_W * IMG_H_NET);
 #else
   resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
