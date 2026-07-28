@@ -34,6 +34,10 @@
 #include "uart_protocol.h"
 #include "mem.h"
 #include "network.h"          // gate8-async API, network_run_async_cl
+#ifdef GAP8_MULTITASK_NETWORK
+#include "gap8_perception_output.h"
+#include "perception_map_uart.h"
+#endif
 #include "flow_obstacle_uart.h"
 
 #include <pmsis.h>
@@ -45,11 +49,14 @@
 
 #define IMG_W        160
 #define IMG_H_CAM    160          // cropped sensor frame from lib/camera
+#ifdef GAP8_MULTITASK_NETWORK
+#define IMG_H_NET    160          // native HM01B0 crop; no deploy resize
+#else
 #define IMG_H_NET    96           // net rows, 15360/160
+#endif
 #define N_CORNERS    8            // network output count
-/* DORY's directional-allocation peak is 153600 B (layer 1); keep 6.4 kB
- * headroom. The old example reserved 380 kB, which prevented coexistence
- * with camera and optical-flow buffers on GAP8's 512 kB L2. */
+/* The multi-task graph retains the same 160 kB directional-allocation budget
+ * while consuming the native 25.6 kB camera crop in place. */
 #define L2_BUF_SIZE  160000
 
 // 1 = print per-inference corners over JTAG. Set 0 for a flash-boot deploy:
@@ -82,6 +89,17 @@ static pi_device_t cluster;     // shared cluster, opened once, reused by the ne
 static void       *l2_buffer;   // net input, scratch and output
 static size_t      l2_buffer_size;
 static PI_L2 gate8_msg_t gate8_tx_msg;
+#ifdef GAP8_MULTITASK_NETWORK
+static PI_L2 uint8_t obstacle_presence_map_20[400];
+static PI_L2 uint8_t inverse_range_map_20[400];
+static PI_L2 uint8_t uncertainty_map_20[400];
+static PI_L2 uint8_t gate_opening_map_20[400];
+static PI_L2 uint8_t corner_confidence[4];
+static PI_L2 perception_map_payload_t perception_map_tx_payload;
+static PI_FC_L1 volatile bool perception_map_tx_pending = false;
+static PI_FC_L1 uint16_t perception_map_sequence = 1;
+static PI_FC_L1 uint32_t perception_map_tx_dropped = 0;
+#endif
 /* UART DMA must never reference the inference-owned pending buffer: a cluster
  * completion can publish the next result while the FC waits for TX completion. */
 static PI_L2 gate8_msg_t gate8_uart_msg;
@@ -108,7 +126,10 @@ static PI_FC_L1 uint32_t latest_state_rx_us = 0;
 static PI_FC_L1 uint32_t state_rx_count = 0;
 static PI_FC_L1 uint32_t state_rx_stale = 0;
 
-typedef struct { uint32_t stm32_timestamp; } inference_args_t;
+typedef struct {
+  uint32_t gap8_ts_us;
+  uint32_t stm32_timestamp;
+} inference_args_t;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 
 CO_FN_BEGIN(uart_state_callback, uart_msg_t *, message)
@@ -1138,6 +1159,18 @@ static void vision_uart_service(void) {
                      pi_task_callback(&done_task, vision_uart_done, NULL));
     return;
   }
+#ifdef GAP8_MULTITASK_NETWORK
+  if (perception_map_tx_pending) {
+    perception_map_tx_pending = false;
+    uart_tx_is_flow = false;
+    uart_tx_busy = true;
+    uart_queued_count++;
+    perception_map_send_async(
+      &uart, &perception_map_tx_payload,
+      pi_task_callback(&done_task, vision_uart_done, NULL));
+    return;
+  }
+#endif
 #if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)
   if (flow_track_tx_pending) {
     flow_track_tx_pending = false;
@@ -1252,8 +1285,14 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
       }
     }
     flow_snapshot_frame_from_callback(camera_frame);
+#ifdef GAP8_MULTITASK_NETWORK
+    memcpy(l2_buffer, camera_frame->buffer, IMG_W * IMG_H_NET);
+#else
     resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
-    iargs.stm32_timestamp = camera_frame->frame_timestamp;
+#endif
+    iargs.gap8_ts_us = camera_frame->frame_timestamp;
+    iargs.stm32_timestamp =
+        stm32_tick_at_gap8_time(camera_frame->frame_timestamp);
     inference_busy = true;
     co_fn_push_start(&inference_ctx, inference_task, &iargs,
                      co_event_init(&inference_done));
@@ -1265,8 +1304,14 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
       CO_WAIT(&inference_done);
     }
   }
+#ifdef GAP8_MULTITASK_NETWORK
+  memcpy(l2_buffer, camera_frame->buffer, IMG_W * IMG_H_NET);
+#else
   resize_v_160_to_96(camera_frame->buffer, (uint8_t *)l2_buffer);
-  iargs.stm32_timestamp = camera_frame->frame_timestamp;
+#endif
+  iargs.gap8_ts_us = camera_frame->frame_timestamp;
+  iargs.stm32_timestamp =
+      stm32_tick_at_gap8_time(camera_frame->frame_timestamp);
   inference_busy = true;
   co_fn_push_start(&inference_ctx, inference_task, &iargs,
                    co_event_init(&inference_done));
@@ -1307,10 +1352,29 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   }
   trace_set(TRACE_USER_0, false);
 
+#ifdef GAP8_MULTITASK_NETWORK
+  gap8_decode_corner_argmax((const uint8_t *)l2_buffer, corners,
+                            corner_confidence);
+  gap8_pool_control_maps((const uint8_t *)l2_buffer,
+                         obstacle_presence_map_20, inverse_range_map_20,
+                         uncertainty_map_20, gate_opening_map_20);
+  if (perception_map_tx_pending) {
+    perception_map_tx_dropped++;
+  } else {
+    perception_map_pack(&perception_map_tx_payload,
+                        obstacle_presence_map_20, inverse_range_map_20,
+                        uncertainty_map_20, gate_opening_map_20,
+                        args->gap8_ts_us,
+                        args->stm32_timestamp, perception_map_sequence++);
+    if (perception_map_sequence == 0) perception_map_sequence = 1;
+    perception_map_tx_pending = true;
+  }
+#else
   const int32_t *raw = (const int32_t *) l2_buffer;
   for (int i = 0; i < N_CORNERS; i++) {
     corners[i] = raw[i] * GATE8_EPS + GATE8_BIAS[i];
   }
+#endif
 
   if (gate8_tx_pending) {
     gate8_tx_dropped++;

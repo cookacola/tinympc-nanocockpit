@@ -1,0 +1,75 @@
+{
+  "format": "nanocockpit-dory-network-v1",
+  "name": "gap8-multitask-dory",
+  "source_dory_app": "/home/cchen/isaacsim-workspace/workspace/gap8_rollout_nemo_dory_hm01b0_v4_epoch22_seed9/gap8_application",
+  "source_nemo_report": "/home/cchen/isaacsim-workspace/workspace/gap8_rollout_nemo_dory_hm01b0_v4_epoch22_seed9/integer/nemo_export_report.json",
+  "input": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [
+      160,
+      160,
+      1
+    ]
+  },
+  "output": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [
+      40,
+      40,
+      8
+    ],
+    "channels": [
+      "corner_tl",
+      "corner_tr",
+      "corner_br",
+      "corner_bl",
+      "obstacle_presence",
+      "inverse_range",
+      "uncertainty",
+      "gate"
+    ],
+    "channel_semantics": {
+      "obstacle_presence": "ABI-compatible name for collision-within-horizon probability at the nominal 1.0 m/s training state",
+      "inverse_range": "1 - clipped conservative range / 6 m",
+      "uncertainty": "clearance-boundary proximity"
+    },
+    "epsilon": 0.19889970123767853,
+    "spatial_offset": [
+      8.042428834533691,
+      11.111829621887207,
+      11.572567803955078,
+      8.653360231018066,
+      12.788898332214355,
+      7.22682176361084,
+      5.082098348236084,
+      36.62235341796875
+    ],
+    "learned_bias": [
+      -5.684194087982178,
+      -0.36083489656448364,
+      -0.45318108797073364,
+      -3.4574155807495117,
+      0.17458303272724152,
+      1.1917307376861572,
+      1.3860822916030884,
+      -1.4064135551452637
+    ]
+  },
+  "firmware": {
+    "cluster_workers": 7,
+    "async_entry": "gap8_network_run_async_cl",
+    "raw_tensor_uart": false,
+    "controller_products": [
+      "ordered corner coordinates/confidence",
+      "20x20 nominal-speed collision probability",
+      "20x20 inverse range",
+      "20x20 uncertainty",
+      "20x20 gate-opening permission"
+    ]
+  },
+  "controller_qparams_header": "/home/cchen/tinympc-crazyflie/apps/controller_tinympc_eigen/src/perception_model_qparams.h",
+  "validation_metrics": "/home/cchen/isaacsim-workspace/workspace/gap8_rollout_float_hm01b0_v4/evaluation/validation_metrics.json",
+  "controller_danger_threshold": 0.4
+}
