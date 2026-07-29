@@ -94,7 +94,8 @@ $ cfclient
 With the AI-deck connected in AP mode, the viewer receives the 160x120 center
 crop used by `gap8-stdc-real-dory-shared` and runs the exact three-component
 integer ONNX release from `gap8_stdc_release_shared_real_v1`. It renders the
-ordered gate-corner and obstacle-danger outputs.
+ordered gate-corner and obstacle-danger outputs, including the same validated
+three-corner recovery used by the deployed GAP8 decoder.
 
 ```shell
 $ source venv/bin/activate

@@ -73,7 +73,11 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
     danger_prob = _probability(danger_q, affine["danger"])
     threshold = float(model["manifest"]["danger_probability_threshold"])
     corners_px, corner_scores = _decode_corners(corners_prob, display_y_offset)
-    gate_locked = bool(np.all(np.max(corner_q, axis=(1, 2)) >= CORNER_Q_THRESHOLDS))
+    corner_confident = np.max(corner_q, axis=(1, 2)) >= CORNER_Q_THRESHOLDS
+    corners_px, recovered_corner, gate_reason = _validate_or_recover_gate(
+        corners_px, corner_confident, display_y_offset
+    )
+    gate_locked = gate_reason.startswith("accepted")
     source_h, source_w = frame.shape[:2]
     unsafe = _danger_overlay(danger_prob, source_w, source_h, display_y_offset)
     max_danger = float(np.max(danger_prob))
@@ -97,8 +101,13 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
             "corner_br_40": corners_prob[2], "corner_bl_40": corners_prob[3],
             "danger_20": danger_prob,
         },
-        "debug": {"checkpoint": model["checkpoint"], "frame_id": getattr(metadata, "frame_id", None),
-                  "gate_locked": gate_locked},
+        "debug": {
+            "checkpoint": model["checkpoint"],
+            "frame_id": getattr(metadata, "frame_id", None),
+            "gate_locked": gate_locked,
+            "gate_reason": gate_reason,
+            "recovered_corner": recovered_corner,
+        },
     }
 
 
@@ -152,6 +161,47 @@ def _decode_corners(heatmaps: np.ndarray, y_offset: int) -> tuple[np.ndarray, np
         points.append(((x + 0.5) * 4.0, (y + 0.5) * 4.0 + y_offset))
         scores.append(float(channel[y, x]))
     return np.asarray(points, dtype=np.float32), np.asarray(scores, dtype=np.float32)
+
+
+def _validate_or_recover_gate(
+    corners: np.ndarray, confident: np.ndarray, y_offset: int
+) -> tuple[np.ndarray, int | None, str]:
+    """Mirror the deployed GAP8 confidence and geometry gate."""
+    points = np.asarray(corners, dtype=np.float32).copy()
+    confident = np.asarray(confident, dtype=bool)
+    count = int(confident.sum())
+    recovered = None
+    if count < 3:
+        return points, recovered, "confidence"
+    if count == 3:
+        recovered = int(np.flatnonzero(~confident)[0])
+        opposite = (recovered + 2) & 3
+        previous = (recovered + 3) & 3
+        following = (recovered + 1) & 3
+        points[recovered] = points[previous] + points[following] - points[opposite]
+        x, y = points[recovered]
+        if not (0.0 <= x < INPUT_WIDTH and y_offset <= y < y_offset + INPUT_HEIGHT):
+            return np.asarray(corners, dtype=np.float32), None, "recovered_out_of_bounds"
+
+    # Semantic corner order is TL, TR, BR, BL.
+    if not (
+        points[0, 0] < points[1, 0]
+        and points[3, 0] < points[2, 0]
+        and points[0, 1] < points[3, 1]
+        and points[1, 1] < points[2, 1]
+    ):
+        return np.asarray(corners, dtype=np.float32), None, "ordering"
+    contour = points.reshape(-1, 1, 2)
+    if not cv2.isContourConvex(contour):
+        return np.asarray(corners, dtype=np.float32), None, "nonconvex"
+    area = abs(float(cv2.contourArea(contour)))
+    if area < 128.0 or area > 23000.0:
+        return np.asarray(corners, dtype=np.float32), None, "area"
+    width = 0.5 * ((points[1, 0] - points[0, 0]) + (points[2, 0] - points[3, 0]))
+    height = 0.5 * ((points[3, 1] - points[0, 1]) + (points[2, 1] - points[1, 1]))
+    if width <= 0.0 or height <= 0.0 or not (0.35 <= width / height <= 2.85):
+        return np.asarray(corners, dtype=np.float32), None, "aspect"
+    return points, recovered, "accepted_three_corners" if recovered is not None else "accepted"
 
 
 def _danger_overlay(danger: np.ndarray, width: int, height: int, y_offset: int) -> np.ndarray:
