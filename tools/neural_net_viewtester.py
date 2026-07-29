@@ -219,8 +219,12 @@ def build_display(gray, metadata, result):
     overlay = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     draw_metadata(overlay, metadata)
     draw_nn_overlay(overlay, result)
-    overlay = cv2.resize(overlay, (heatmaps.shape[1], gray.shape[0]), interpolation=cv2.INTER_NEAREST)
-    return np.vstack([overlay, heatmaps])
+    # Keep the camera's native aspect ratio. The heatmap grid is three panels
+    # wide, so pad the overview row instead of stretching it to that width.
+    overview = np.zeros((gray.shape[0], heatmaps.shape[1], 3), dtype=np.uint8)
+    x0 = max(0, (overview.shape[1] - overlay.shape[1]) // 2)
+    overview[:, x0:x0 + overlay.shape[1]] = overlay
+    return np.vstack([overview, heatmaps])
 
 
 def draw_metadata(disp, metadata):
