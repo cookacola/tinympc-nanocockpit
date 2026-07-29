@@ -96,11 +96,18 @@ target does not link or execute a neural network and does not allocate the
 180 kB DORY workspace. It only captures the camera and sends the 160x120 center
 crop expected by `shared_dory_frozen_real_v1`.
 
+From `src/gap`, use the repository's GAP SDK wrapper:
+
 ```shell
-> cd src/gap/examples/pulp-frontnet
-> make clean STDC_STREAM_ONLY=1
-> make build STDC_STREAM_ONLY=1
-> make flash STDC_STREAM_ONLY=1
+> ./gap8.sh examples/pulp-frontnet clean build STDC_STREAM_ONLY=1
+> ./gap8.sh examples/pulp-frontnet all STDC_STREAM_ONLY=1
+```
+
+The first command is a build-only check. The second builds the image and
+flashes it over JTAG. It is also safe to use just one combined command:
+
+```shell
+> ./gap8.sh examples/pulp-frontnet clean all STDC_STREAM_ONLY=1
 ```
 
 The streaming-only image uses 55,964 bytes of L2 and 28 bytes of L1 in the
