@@ -59,7 +59,11 @@
 #define N_CORNERS    8            // network output count
 /* The multi-task graph retains the same 160 kB directional-allocation budget
  * while consuming the native 25.6 kB camera crop in place. */
+#ifdef GAP8_STDC_SHARED_NETWORK
+#define L2_BUF_SIZE  180000
+#else
 #define L2_BUF_SIZE  160000
+#endif
 
 // 1 = print per-inference corners over JTAG. Set 0 for a flash-boot deploy:
 // there is no console then and printf can pollute the gate8 UART.
