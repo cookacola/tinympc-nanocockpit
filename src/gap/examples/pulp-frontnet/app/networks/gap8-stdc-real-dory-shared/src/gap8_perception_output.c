@@ -8,7 +8,6 @@
 #define DANGER_H 8
 #define DANGER_OFFSET (CORNER_W * CORNER_H * CORNER_C)
 static const uint8_t corner_threshold[4] = {136, 141, 187, 131};
-#define DANGER_Q_THRESHOLD 42
 
 static float cross2(float ax, float ay, float bx, float by,
                     float px, float py) {
@@ -115,8 +114,7 @@ void gap8_pool_control_maps(const uint8_t *packed,
   for (int y = 0; y < 16; ++y) {
     for (int x = 0; x < 20; ++x) {
       obstacle_presence[(y + 2) * 20 + x] =
-          danger[(y / 2) * DANGER_W + x / 2] >= DANGER_Q_THRESHOLD
-              ? 255 : 0;
+          danger[(y / 2) * DANGER_W + x / 2];
     }
   }
 

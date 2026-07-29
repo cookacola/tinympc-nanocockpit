@@ -20,6 +20,7 @@
 #define PERCEPTION_MAP_CHANNELS 4
 #define PERCEPTION_MAP_PACKED_BYTES 200
 #define PERCEPTION_MAP_WIRE_VERSION 2
+#define PERCEPTION_MAP_FLAG_DANGER_RAW_U8 (1u << 0)
 
 typedef struct __attribute__((packed)) {
   uint32_t gap8_ts_us;

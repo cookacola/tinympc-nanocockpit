@@ -27,6 +27,17 @@ static uint8_t max_2x2_u4(const uint8_t map[400], int ox, int oy) {
   return maximum >> 4;
 }
 
+static uint8_t max_2x2_u8(const uint8_t map[400], int ox, int oy) {
+  uint8_t maximum = 0;
+  for (int dy = 0; dy < 2; ++dy) {
+    for (int dx = 0; dx < 2; ++dx) {
+      const uint8_t value = map[(2 * oy + dy) * 20 + 2 * ox + dx];
+      if (value > maximum) maximum = value;
+    }
+  }
+  return maximum;
+}
+
 static uint8_t min_2x2_u4(const uint8_t map[400], int ox, int oy) {
   uint8_t minimum = 255;
   for (int dy = 0; dy < 2; ++dy) {
@@ -53,9 +64,22 @@ void perception_map_pack(perception_map_payload_t *payload,
   payload->version = PERCEPTION_MAP_WIRE_VERSION;
   payload->width = PERCEPTION_MAP_W;
   payload->height = PERCEPTION_MAP_H;
+#ifdef GAP8_STDC_SHARED_NETWORK
+  payload->flags |= PERCEPTION_MAP_FLAG_DANGER_RAW_U8;
+#endif
   for (int y = 0; y < PERCEPTION_MAP_H; ++y) {
     for (int x = 0; x < PERCEPTION_MAP_W; ++x) {
       const int cell = y * PERCEPTION_MAP_W + x;
+#ifdef GAP8_STDC_SHARED_NETWORK
+      /*
+       * The danger-only network has one uint8 output per cell. Preserve all
+       * eight bits in the two otherwise-unused inverse-range nibbles so the
+       * STM32 can apply a runtime threshold selected from cfclient.
+       */
+      const uint8_t danger = max_2x2_u8(obstacle_presence_20, x, y);
+      set_nibble(payload->packed_u4, 4 * cell, danger);
+      set_nibble(payload->packed_u4, 4 * cell + 1, danger >> 4);
+#else
       set_nibble(payload->packed_u4, 4 * cell,
                  max_2x2_u4(obstacle_presence_20, x, y));
       set_nibble(payload->packed_u4, 4 * cell + 1,
@@ -64,6 +88,7 @@ void perception_map_pack(perception_map_payload_t *payload,
                  max_2x2_u4(uncertainty_20, x, y));
       set_nibble(payload->packed_u4, 4 * cell + 3,
                  min_2x2_u4(gate_opening_20, x, y));
+#endif
     }
   }
 }
