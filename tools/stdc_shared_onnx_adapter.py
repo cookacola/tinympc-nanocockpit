@@ -19,6 +19,8 @@ INPUT_WIDTH, INPUT_HEIGHT = 160, 120
 SOURCE_HEIGHT = 160
 CORNER_SHAPE = (30, 40, 4)
 DANGER_SHAPE = (8, 10)
+# These are the integer thresholds used by the deployed GAP8 output decoder.
+CORNER_Q_THRESHOLDS = np.array([136, 141, 187, 131], dtype=np.float32)
 
 
 def _release_root() -> Path:
@@ -71,6 +73,7 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
     danger_prob = _probability(danger_q, affine["danger"])
     threshold = float(model["manifest"]["danger_probability_threshold"])
     corners_px, corner_scores = _decode_corners(corners_prob, display_y_offset)
+    gate_locked = bool(np.all(np.max(corner_q, axis=(1, 2)) >= CORNER_Q_THRESHOLDS))
     source_h, source_w = frame.shape[:2]
     unsafe = _danger_overlay(danger_prob, source_w, source_h, display_y_offset)
     max_danger = float(np.max(danger_prob))
@@ -80,6 +83,9 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
         "dangerous": max_danger >= threshold,
         "confidence": float(np.mean(corner_scores)),
         "corners_px": corners_px,
+        # Keep the individual argmax markers for debugging, but do not join
+        # low-confidence peaks into a fictitious gate polygon.
+        "plane_points_px": corners_px if gate_locked else None,
         "corner_scores": corner_scores,
         "unsafe_mask": unsafe,
         "danger_threshold": threshold,
@@ -91,7 +97,8 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
             "corner_br_40": corners_prob[2], "corner_bl_40": corners_prob[3],
             "danger_20": danger_prob,
         },
-        "debug": {"checkpoint": model["checkpoint"], "frame_id": getattr(metadata, "frame_id", None)},
+        "debug": {"checkpoint": model["checkpoint"], "frame_id": getattr(metadata, "frame_id", None),
+                  "gate_locked": gate_locked},
     }
 
 
@@ -151,6 +158,9 @@ def _danger_overlay(danger: np.ndarray, width: int, height: int, y_offset: int) 
     cropped = cv2.resize(danger, (INPUT_WIDTH, INPUT_HEIGHT), interpolation=cv2.INTER_NEAREST)
     if height == INPUT_HEIGHT:
         return cropped
-    full = np.ones((height, width), dtype=np.float32)
+    # The 160x160 camera frame contains 20 rows above and below the STDC
+    # crop. They are conservatively unsafe for the flight controller, but are
+    # not a neural-net prediction and should not paint the host preview red.
+    full = np.zeros((height, width), dtype=np.float32)
     full[y_offset:y_offset + INPUT_HEIGHT] = cropped
     return full
