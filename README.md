@@ -91,15 +91,34 @@ $ cfclient
 
 ### View the deployed GAP8 perception network
 
-With the AI-deck connected in AP mode, the viewer receives the 160x120 center
-crop used by `gap8-stdc-real-dory-shared` and runs the exact three-component
-integer ONNX release from `gap8_stdc_release_shared_real_v1`. It renders the
-ordered gate-corner and obstacle-danger outputs, including the same validated
-three-corner recovery used by the deployed GAP8 decoder.
+For laptop-only inference, build and flash the dedicated GAP8 streamer. This
+target does not link or execute a neural network and does not allocate the
+180 kB DORY workspace. It only captures the camera and sends the 160x120 center
+crop expected by `shared_dory_frozen_real_v1`.
+
+```shell
+> cd src/gap/examples/pulp-frontnet
+> make clean STDC_STREAM_ONLY=1
+> make build STDC_STREAM_ONLY=1
+> make flash STDC_STREAM_ONLY=1
+```
+
+The streaming-only image uses 55,964 bytes of L2 and 28 bytes of L1 in the
+linked GAP8 build. The AI-deck must also run this repository's NINA CPX bridge;
+the Bitcraze JPEG `wifi-img-streamer` protocol is not compatible with this
+client.
+
+With the AI-deck connected in AP mode, the viewer receives the crop and runs
+the exact three-component integer ONNX release from
+`gap8_stdc_release_shared_real_v1` on the laptop. It renders the ordered
+gate-corner and obstacle-danger outputs, including the same validated
+three-corner recovery used by the deployed decoder.
 
 ```shell
 $ source venv/bin/activate
-$ python tools/neural_net_viewtester.py --view both
+$ python tools/neural_net_viewtester.py \
+    --nn-weights ../gap8_stdc_release_shared_real_v1 \
+    --view both
 ```
 
 Pass `-n <AI-deck-IP>` for a different address. The window closes with `q`.
