@@ -26,9 +26,11 @@
 #include "coroutine.h"
 #include "camera.h"
 #include "cluster.h"
+#include "cpx/cpx.h"
 #include "debug.h"
 #include "soc.h"
 #include "time.h"
+#include "streamer.h"
 #include "trace.h"
 #include "uart.h"
 #include "uart_protocol.h"
@@ -91,6 +93,14 @@ _Static_assert(sizeof(gate8_msg_t) == 44, "gate packet ABI changed");
 static uart_t      uart;
 static uart_protocol_t uart_protocol;
 static camera_t    camera;
+#ifdef STREAMER_ENABLE
+static cpx_t       cpx;
+static streamer_t  streamer;
+static PI_FC_L1 tof_msg_t latest_tof;
+static PI_FC_L1 uint32_t latest_tof_rx_us = 0;
+static PI_L2 inference_stamped_msg_t latest_stream_inference;
+static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
+#endif
 static pi_device_t cluster;     // shared cluster, opened once, reused by the net
 static void       *l2_buffer;   // net input, scratch and output
 static size_t      l2_buffer_size;
@@ -147,6 +157,31 @@ CO_FN_BEGIN(uart_state_callback, uart_msg_t *, message)
   }
 }
 CO_FN_END()
+
+#ifdef STREAMER_ENABLE
+CO_FN_DECLARE(streamer_rx_task);
+
+CO_FN_BEGIN(streamer_rx_task, void *, arg)
+{
+  static PI_L2 offboard_buffer_t offboard_buffer;
+  static PI_FC_L1 streamer_buffer_t offboard_buffer_rx;
+  static PI_FC_L1 co_event_t done_task;
+
+  while (true) {
+    streamer_buffer_init(&offboard_buffer_rx, &offboard_buffer,
+                         sizeof(offboard_buffer));
+    streamer_receive_buffer_async(&streamer, &offboard_buffer_rx,
+                                  co_event_init(&done_task));
+    CO_WAIT(&done_task);
+    streamer_stats_frame_completed(&streamer, &offboard_buffer.stats);
+  }
+}
+CO_FN_END()
+
+static void streamer_rx_start(void) {
+  co_fn_push_start(&streamer_rx_ctx, streamer_rx_task, NULL, NULL);
+}
+#endif
 
 /*
  * Translate a GAP8 camera timestamp into the STM32 millisecond tick domain.
@@ -1254,6 +1289,9 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
   static PI_FC_L1 inference_args_t iargs;
   static PI_FC_L1 co_event_t inference_done;
 #endif
+#if defined(STREAMER_ENABLE) && defined(GAP8_STDC_PAIR_NETWORK)
+  static PI_FC_L1 co_event_t streamer_tx_done;
+#endif
 
 #ifdef CAMERA_CAPTURE_TEST_ONLY
   (void)camera_frame;
@@ -1328,6 +1366,20 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
   co_fn_push_start(&inference_ctx, inference_task, &iargs,
                    co_event_init(&inference_done));
   started = true;
+#endif
+
+#if defined(STREAMER_ENABLE) && defined(GAP8_STDC_PAIR_NETWORK)
+  /* The STDC model consumes the central 160x120 region. The network and flow
+   * frontend already copied the full 160x160 frame above, so compact this
+   * view only for transmission; camera capture remains 160x160. */
+  streamer_send_frame_region_async(
+      &streamer, camera_frame,
+      20, 0, IMG_W, IMG_H_NET,
+      &latest_state, latest_state_rx_us,
+      &latest_tof, latest_tof_rx_us,
+      &latest_stream_inference,
+      co_event_init(&streamer_tx_done));
+  CO_WAIT(&streamer_tx_done);
 #endif
 }
 CO_FN_END()
@@ -1560,7 +1612,13 @@ static void main_task(void) {
   flow_obstacle_test_only_loop();
 #else
   camera_init(&camera, camera_callback);
+#ifdef STREAMER_ENABLE
+  cpx_init(&cpx);
+  streamer_init(&streamer, &camera, &cpx);
+  streamer_alloc_frames(&streamer, &camera);
+#else
   camera_init_frames_alloc(&camera);
+#endif
 #if !defined(FLOW_OBSTACLE_CAMERA_TEST) && !defined(CAMERA_CAPTURE_TEST_ONLY)
   cluster_init(&cluster);
 
@@ -1594,6 +1652,10 @@ static void main_task(void) {
 #endif
   camera_start(&camera);
   uart_protocol_start(&uart_protocol);
+#ifdef STREAMER_ENABLE
+  cpx_start(&cpx);
+  streamer_rx_start();
+#endif
 
   while (true) {
 #if defined(FLOW_OBSTACLE_ENABLE) || defined(FLOW_OBSTACLE_CAMERA_TEST)

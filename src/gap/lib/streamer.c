@@ -224,6 +224,61 @@ void streamer_send_frame_async(
     co_fn_push_start(&frame->send_ctx, streamer_send_task, (void *)frame, done_task);
 }
 
+void streamer_send_frame_region_async(
+    streamer_t *streamer,
+    frame_t *camera_frame,
+    uint16_t top, uint16_t left, uint16_t width, uint16_t height,
+    state_msg_t *state, uint32_t state_timestamp,
+    tof_msg_t *tof, uint32_t tof_timestamp,
+    inference_stamped_msg_t *inference,
+    pi_task_t *done_task
+) {
+#if defined(STREAMER_DISABLE) || defined(__PLATFORM_GVSOC__)
+    if (done_task) {
+        pi_task_push(done_task);
+    }
+    return;
+#endif
+
+    if (top + height > CAMERA_CROP_HEIGHT ||
+        left + width > CAMERA_CROP_WIDTH ||
+        width == 0 || height == 0) {
+        CO_ASSERTION_FAILURE("Invalid streamer region %ux%u @ (%u,%u) for %ux%u frame.\n",
+                             width, height, left, top,
+                             CAMERA_CROP_WIDTH, CAMERA_CROP_HEIGHT);
+    }
+
+    /* Camera storage is the stream payload's flexible buffer. Compact after
+     * inference/flow have copied the full frame, then the normal sender can
+     * serialize the selected prefix without another L2 allocation. */
+    uint8_t *buffer = camera_frame->buffer;
+    for (uint16_t row = 0; row < height; ++row) {
+        memmove(buffer + (size_t)row * width,
+                buffer + (size_t)(top + row) * CAMERA_CROP_WIDTH + left,
+                width);
+    }
+
+    int buffer_id = camera_get_buffer_id(streamer->camera, camera_frame);
+    streamer_frame_t *frame = &streamer->frames[buffer_id];
+    frame->payload->metadata = (streamer_metadata_t){
+        .metadata_version = STREAMER_METADATA_VERSION,
+        .frame_height = height,
+        .frame_width = width,
+        .frame_bpp = CAMERA_CROP_BPP,
+        .frame_format = STREAMER_FORMAT_GRAY_8,
+        .frame_id = camera_frame->frame_id,
+        .frame_timestamp = camera_frame->frame_timestamp,
+        .state = *state,
+        .state_timestamp = state_timestamp,
+        .tof = *tof,
+        .tof_timestamp = tof_timestamp,
+        .reply_frame_timestamp = streamer->reply_frame_timestamp,
+        .reply_recv_timestamp = streamer->reply_recv_timestamp,
+        .inference = *inference,
+    };
+    co_fn_push_start(&frame->send_ctx, streamer_send_task, (void *)frame, done_task);
+}
+
 CO_FN_BEGIN(streamer_send_task, streamer_frame_t *, frame)
 {
     // Only one send at a time must be inside this critical section, so static variables can be used

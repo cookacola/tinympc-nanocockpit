@@ -89,6 +89,24 @@ $ source venv/bin/activate
 $ cfclient
 ```
 
+### View the deployed GAP8 perception network
+
+With the AI-deck connected in AP mode, the viewer receives the 160x120 center
+crop used by `gap8-stdc-real-dory-shared` and runs the exact three-component
+integer ONNX release from `gap8_stdc_release_shared_real_v1`. It renders the
+ordered gate-corner and obstacle-danger outputs.
+
+```shell
+$ source venv/bin/activate
+$ python tools/neural_net_viewtester.py --view both
+```
+
+Pass `-n <AI-deck-IP>` for a different address. The window closes with `q`.
+Use `--save --no-display --frames 100` to capture a bounded headless run.
+The `--send-nn-output` switch is intentionally not used with the STDC viewer:
+the legacy streamer reply transports only four floats, whereas this network
+produces corner heatmaps and an obstacle map for the on-board controller.
+
 ## Literature review
 In our paper, we review the body of work on nanorobotics over the last five years and demonstrate both the high research interest in the topic and the Crazyflie's prominent status as de-facto standard robot platform.
 The data to reproduce our analysis is available in `docs/literature_review` as a resource to other researchers that approach the nano-drone field.
