@@ -58,11 +58,11 @@
 // Disable streamer: streamer_send_frame_async becomes a no-op and completes immediately
 // #define STREAMER_DISABLE
 
-// Send the 160x120 center crop used by the shared STDC DORY model to the host.
-// Other network packages retain their original camera allocation behavior.
-#ifdef GAP8_STDC_PAIR_NETWORK
-#define STREAMER_ENABLE
-#endif
+// Optional CPX streamer for explicit debugging builds only.  Keep this off
+// for the shared STDC DORY deployment: the normal deploy runs inference on
+// the GAP8 without allocating streamer frames or transmitting camera crops.
+// The laptop-inference path is the separate examples/streamer application.
+// #define STREAMER_ENABLE
 
 // Emit synthetic obstacle-flow sector frames over the same UART used by gate8.
 // This validates the STM32 receiver and log-only half-space synthesis before the
