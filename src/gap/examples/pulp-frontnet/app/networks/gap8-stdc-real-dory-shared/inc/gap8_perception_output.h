@@ -9,6 +9,8 @@
 void gap8_decode_corner_argmax(const uint8_t *packed,
                                float corners_xy[8],
                                uint8_t confidence[4]);
+int gap8_validate_or_recover_gate(float corners_xy[8],
+                                  const uint8_t confidence[4]);
 void gap8_pool_control_maps(const uint8_t *packed,
                             uint8_t obstacle_presence[400],
                             uint8_t inverse_range[400],

@@ -1367,6 +1367,9 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
 #ifdef GAP8_MULTITASK_NETWORK
   gap8_decode_corner_argmax((const uint8_t *)l2_buffer, corners,
                             corner_confidence);
+  /* Reconstruct exactly one missing corner only when the other three pass
+   * confidence, orientation, convexity, area, aspect, and crop bounds. */
+  (void)gap8_validate_or_recover_gate(corners, corner_confidence);
   gap8_pool_control_maps((const uint8_t *)l2_buffer,
                          obstacle_presence_map_20, inverse_range_map_20,
                          uncertainty_map_20, gate_opening_map_20);

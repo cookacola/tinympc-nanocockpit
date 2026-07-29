@@ -33,6 +33,69 @@ void gap8_decode_corner_argmax(const uint8_t *packed,
   }
 }
 
+int gap8_validate_or_recover_gate(float corners[8],
+                                  const uint8_t confidence[4]) {
+  int confident_count = 0;
+  int recovered_corner = -1;
+  float original_recovered[2] = {0.0f, 0.0f};
+#define GAP8_REJECT_GATE() do {                                      \
+    if (confident_count == 3 && recovered_corner >= 0) {             \
+      corners[2 * recovered_corner] = original_recovered[0];         \
+      corners[2 * recovered_corner + 1] = original_recovered[1];     \
+    }                                                                \
+    return -1;                                                       \
+  } while (0)
+  for (int c = 0; c < 4; ++c) {
+    if (confidence[c] >= corner_threshold[c]) confident_count++;
+    else recovered_corner = c;
+  }
+  if (confident_count < 3) GAP8_REJECT_GATE();
+  if (confident_count == 3) {
+    int opposite = (recovered_corner + 2) & 3;
+    int previous = (recovered_corner + 3) & 3;
+    int following = (recovered_corner + 1) & 3;
+    original_recovered[0] = corners[2 * recovered_corner];
+    original_recovered[1] = corners[2 * recovered_corner + 1];
+    corners[2 * recovered_corner] =
+        corners[2 * previous] + corners[2 * following]
+        - corners[2 * opposite];
+    corners[2 * recovered_corner + 1] =
+        corners[2 * previous + 1] + corners[2 * following + 1]
+        - corners[2 * opposite + 1];
+    if (corners[2 * recovered_corner] < 0.0f ||
+        corners[2 * recovered_corner] >= 160.0f ||
+        corners[2 * recovered_corner + 1] < 20.0f ||
+        corners[2 * recovered_corner + 1] >= 140.0f) GAP8_REJECT_GATE();
+  }
+  if (!(corners[0] < corners[2] && corners[6] < corners[4] &&
+        corners[1] < corners[7] && corners[3] < corners[5])) GAP8_REJECT_GATE();
+  float signed_area2 = 0.0f;
+  float sign = 0.0f;
+  for (int edge = 0; edge < 4; ++edge) {
+    int next = (edge + 1) & 3;
+    int after = (edge + 2) & 3;
+    signed_area2 += corners[2 * edge] * corners[2 * next + 1]
+                  - corners[2 * next] * corners[2 * edge + 1];
+    float side = cross2(
+        corners[2 * edge], corners[2 * edge + 1],
+        corners[2 * next], corners[2 * next + 1],
+        corners[2 * after], corners[2 * after + 1]);
+    if (edge == 0) sign = side;
+    if (side * sign <= 0.0f) GAP8_REJECT_GATE();
+  }
+  float area = signed_area2 < 0.0f ? -0.5f * signed_area2
+                                  : 0.5f * signed_area2;
+  if (area < 128.0f || area > 23000.0f) GAP8_REJECT_GATE();
+  float width = 0.5f * (
+      (corners[2] - corners[0]) + (corners[4] - corners[6]));
+  float height = 0.5f * (
+      (corners[7] - corners[1]) + (corners[5] - corners[3]));
+  if (width <= 0.0f || height <= 0.0f ||
+      width / height < 0.35f || width / height > 2.85f) GAP8_REJECT_GATE();
+#undef GAP8_REJECT_GATE
+  return recovered_corner >= 0 ? recovered_corner : 4;
+}
+
 void gap8_pool_control_maps(const uint8_t *packed,
                             uint8_t obstacle_presence[400],
                             uint8_t inverse_range[400],
@@ -57,44 +120,25 @@ void gap8_pool_control_maps(const uint8_t *packed,
     }
   }
 
-  /* A gate permission map is emitted only after confidence, ordering,
-   * convexity, area, and aspect checks. Invalid geometry is a safe no-op. */
-  for (int c = 0; c < 4; ++c) {
-    if (confidence[c] < corner_threshold[c]) return;
-  }
-  if (!(corners[0] < corners[2] && corners[6] < corners[4] &&
-        corners[1] < corners[7] && corners[3] < corners[5])) return;
-  float signed_area2 = 0.0f;
-  float sign = 0.0f;
-  for (int edge = 0; edge < 4; ++edge) {
-    int next = (edge + 1) & 3;
-    int after = (edge + 2) & 3;
-    signed_area2 += corners[2 * edge] * corners[2 * next + 1]
-                  - corners[2 * next] * corners[2 * edge + 1];
-    float side = cross2(
-        corners[2 * edge], corners[2 * edge + 1],
-        corners[2 * next], corners[2 * next + 1],
-        corners[2 * after], corners[2 * after + 1]);
-    if (edge == 0) sign = side;
-    if (side * sign <= 0.0f) return;
-  }
-  float area = signed_area2 < 0.0f ? -0.5f * signed_area2
-                                  : 0.5f * signed_area2;
-  if (area < 128.0f || area > 23000.0f) return;
-  float width = 0.5f * (
-      (corners[2] - corners[0]) + (corners[4] - corners[6]));
-  float height = 0.5f * (
-      (corners[7] - corners[1]) + (corners[5] - corners[3]));
-  if (width <= 0.0f || height <= 0.0f ||
-      width / height < 0.35f || width / height > 2.85f) return;
+  /* Invalid geometry is a safe no-op. A recovered gate receives a more
+   * conservative permission inset than a fully observed gate. */
+  int recovered_corner = gap8_validate_or_recover_gate(corners, confidence);
+  if (recovered_corner < 0) return;
+  float sign = cross2(
+      corners[0], corners[1], corners[2], corners[3],
+      corners[4], corners[5]);
   float cx = 0.0f, cy = 0.0f, inset[8];
   for (int c = 0; c < 4; ++c) {
     cx += 0.25f * corners[2 * c];
     cy += 0.25f * corners[2 * c + 1];
   }
+  float corner_weight = recovered_corner < 4 ? 0.80f : 0.88f;
+  float center_weight = 1.0f - corner_weight;
   for (int c = 0; c < 4; ++c) {
-    inset[2 * c] = 0.88f * corners[2 * c] + 0.12f * cx;
-    inset[2 * c + 1] = 0.88f * corners[2 * c + 1] + 0.12f * cy;
+    inset[2 * c] =
+        corner_weight * corners[2 * c] + center_weight * cx;
+    inset[2 * c + 1] =
+        corner_weight * corners[2 * c + 1] + center_weight * cy;
   }
   for (int y = 0; y < 20; ++y) {
     for (int x = 0; x < 20; ++x) {
