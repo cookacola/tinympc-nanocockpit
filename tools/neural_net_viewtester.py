@@ -53,7 +53,7 @@ parser.add_argument("--nn-weights", default=None,
 parser.add_argument("--send-nn-output", action="store_true",
                     help="send result['reply'] or result['network_output'] back to the deck")
 parser.add_argument("--view", choices=("heatmaps", "overlay", "both"), default="heatmaps",
-                    help="display mode: raw NN heatmaps, postprocessed overlay, or both")
+                    help="display mode: compact raw/map view, postprocessed overlay, or both")
 args = parser.parse_args()
 
 # Freshest-frame hand-off: maxsize=1 so the display always gets the newest frame
@@ -216,15 +216,10 @@ def build_display(gray, metadata, result):
     if args.view == "heatmaps":
         return heatmaps
 
-    overlay = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-    draw_metadata(overlay, metadata)
-    draw_nn_overlay(overlay, result)
-    # Keep the camera's native aspect ratio. The heatmap grid is three panels
-    # wide, so pad the overview row instead of stretching it to that width.
-    overview = np.zeros((gray.shape[0], heatmaps.shape[1], 3), dtype=np.uint8)
-    x0 = max(0, (overview.shape[1] - overlay.shape[1]) // 2)
-    overview[:, x0:x0 + overlay.shape[1]] = overlay
-    return np.vstack([overview, heatmaps])
+    # The compact view already includes the camera, corner response, and
+    # danger response.  Keeping a second overview only duplicated the camera
+    # and introduced large black padding for a 160x160 stream.
+    return heatmaps
 
 
 def draw_metadata(disp, metadata):
@@ -249,12 +244,9 @@ def draw_heatmap_view(gray, metadata, result):
     panels = [
         raw,
         _heatmap_panel(heatmaps.get("corner_max_40"), "corner max", cv2.COLORMAP_TURBO, width, height),
-        _heatmap_panel(heatmaps.get("gate_40"), "gate opening", cv2.COLORMAP_VIRIDIS, width, height),
         _heatmap_panel(heatmaps.get("danger_20"), "danger", cv2.COLORMAP_TURBO, width, height),
-        _heatmap_panel(heatmaps.get("inverse_range_20"), "inverse range", cv2.COLORMAP_TURBO, width, height),
-        _heatmap_panel(heatmaps.get("uncertainty_20"), "uncertainty", cv2.COLORMAP_MAGMA, width, height),
     ]
-    return np.vstack([np.hstack(panels[:3]), np.hstack(panels[3:])])
+    return np.hstack(panels)
 
 
 def _summary_label(result):

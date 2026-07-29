@@ -64,7 +64,12 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
         model = load_model()
     crop, display_y_offset = _center_crop(frame)
     sessions = model["sessions"]
-    encoder = _run(sessions["encoder"], crop.astype(np.float32)[None, None] / 255.0)
+    # The released integer graph consumes the camera's *uint8 pixel domain*
+    # (see nanocockpit/manifest.json), not a [0, 1] normalized image.  Keep
+    # float32 solely because ONNX Runtime declares the graph input as float.
+    # Dividing by 255 here drives the integer encoder far outside the domain
+    # used by both the GAP8 DORY network and the release calibration.
+    encoder = _run(sessions["encoder"], crop.astype(np.float32)[None, None])
     corner_q = _quantized(_run(sessions["corner_head"], encoder)[0])
     danger_q = _quantized(_run(sessions["danger_head"], encoder)[0, 0])
 
