@@ -3,11 +3,11 @@
  * Charles Chen <cc4919@columbia.edu>
  *
  * Cooperative gate8 deploy. Based on the NanoCockpit pulp-frontnet example, but
- * driving the gate8-async network through the forked async entry
+ * driving the selected network through the shared async entry
  * network_run_async_cl, so the camera capture and the cluster inference coexist
- * under the lib/camera CO_FN framework. Pipeline per frame: capture and crop to
- * 160x160 done by lib/camera, resize to 96x160, run gate8, dequant to 8 corners,
- * send a gate8 message to the STM32 over UART. No Wi-Fi streamer, send only.
+ * under the lib/camera CO_FN framework. The shared-STDC deployment captures a
+ * 160x160 frame, runs on its central 160x120 crop, and sends perception output
+ * to the STM32 over UART. No Wi-Fi streamer is enabled by default.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@
 #include "uart.h"
 #include "uart_protocol.h"
 #include "mem.h"
-#include "network.h"          // gate8-async API, network_run_async_cl
+#include "network.h"          // selected-network API, network_run_async_cl
 #ifdef GAP8_MULTITASK_NETWORK
 #include "gap8_perception_output.h"
 #include "perception_map_uart.h"
@@ -71,7 +71,7 @@
 // there is no console then and printf can pollute the gate8 UART.
 #define GATE8_DEBUG_PRINT 0
 
-/* FLOAT = INT*EPS + BIAS. Order TL,TR,BR,BL. From gate8-async output_dequant. */
+/* FLOAT = INT*EPS + BIAS. Order TL,TR,BR,BL. Used only by legacy networks. */
 #define GATE8_EPS  1.61093718e-04f
 static const float GATE8_BIAS[N_CORNERS] = {
   0.767035f, 0.421470f, 0.818451f, 0.712229f,
