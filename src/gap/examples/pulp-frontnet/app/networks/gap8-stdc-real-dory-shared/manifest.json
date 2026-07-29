@@ -71,6 +71,7 @@
     "strict_allocator_required_bytes": 153985,
     "nanocockpit_workspace_configured_bytes": 180000,
     "linked_static_l2_bytes": 225676,
+    "linked_static_l2_includes_workspace": true,
     "dory_max_l1_tile_bytes": 36289
   },
   "source_reports": {
