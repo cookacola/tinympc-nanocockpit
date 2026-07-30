@@ -27,6 +27,7 @@
 #include "cluster.h"
 #include "coroutine.h"
 #include "cpx/cpx.h"
+#include "crc32.h"
 #include "debug.h"
 #include "gap8_perception_output.h"
 #include "mem.h"
@@ -67,6 +68,10 @@
 
 #define NETWORK_L2_WORKSPACE_SIZE 180000
 
+#ifdef TINY_RACER_PARITY_TEST
+#define NETWORK_INPUT_BYTES       (IMAGE_WIDTH * NETWORK_INPUT_HEIGHT)
+#endif
+
 _Static_assert(CAMERA_CROP_WIDTH == IMAGE_WIDTH,
                "Tiny Racer expects 160-pixel camera rows");
 _Static_assert(CAMERA_CROP_HEIGHT == IMAGE_HEIGHT,
@@ -98,6 +103,52 @@ typedef struct {
     uint32_t stm32_timestamp;
     frame_t *camera_frame;
 } inference_args_t;
+
+#ifdef TINY_RACER_PARITY_TEST
+/*
+ * Deterministic, one-shot DORY replay for comparing against the host ONNX
+ * graph. PARITY_INPUT supplies this exact 160x120 uint8 tensor through
+ * ReadFS; no camera frame or visualization path participates.
+ */
+static void run_parity_test(void) {
+    static PI_FC_L1 pi_task_t network_done;
+    void *input_l3 = ram_malloc(NETWORK_INPUT_BYTES);
+
+    if (!input_l3) {
+        printf("PARITY ERROR: unable to allocate input in L3\n");
+        pmsis_exit(-1);
+    }
+
+    const size_t input_size =
+        load_file_to_ram(input_l3, TINY_RACER_PARITY_INPUT_FILE);
+    if (input_size != NETWORK_INPUT_BYTES) {
+        printf("PARITY ERROR: %s is %u bytes; expected %u\n",
+               TINY_RACER_PARITY_INPUT_FILE, (unsigned int)input_size,
+               (unsigned int)NETWORK_INPUT_BYTES);
+        pmsis_exit(-1);
+    }
+
+    ram_read(l2_buffer, input_l3, NETWORK_INPUT_BYTES);
+    printf("PARITY input_crc32=%08lx\n",
+           (unsigned long)crc32CalculateBuffer(l2_buffer,
+                                               NETWORK_INPUT_BYTES));
+
+    pi_task_block(&network_done);
+    network_run_async_cl(l2_buffer, l2_buffer_size, l2_buffer, 0, 1,
+                         &cluster, &network_done);
+    pi_task_wait_on(&network_done);
+
+    printf("PARITY corner_crc32=%08lx danger_crc32=%08lx output_crc32=%08lx\n",
+           (unsigned long)crc32CalculateBuffer(l2_buffer,
+                                               CORNER_HEATMAP_BYTES),
+           (unsigned long)crc32CalculateBuffer(
+               (const uint8_t *)l2_buffer + CORNER_HEATMAP_BYTES,
+               DANGER_MAP_BYTES),
+           (unsigned long)crc32CalculateBuffer(l2_buffer,
+                                               GAP8_OUTPUT_BYTES));
+    pmsis_exit(0);
+}
+#endif
 
 CO_FN_DECLARE(inference_task);
 CO_FN_DECLARE(streamer_rx_task);
@@ -329,6 +380,10 @@ static void main_task(void) {
     if (!l2_buffer) {
         pmsis_exit(-1);
     }
+
+#ifdef TINY_RACER_PARITY_TEST
+    run_parity_test();
+#endif
 
     trace_init();
 

@@ -28,6 +28,16 @@ APP_CFLAGS  += -g -O2 -fno-indirect-inlining -flto
 APP_LDFLAGS += -g -Wl,--print-memory-usage -flto
 
 STDC_STREAM_ONLY ?= 0
+PARITY_TEST ?= 0
+
+ifeq ($(PARITY_TEST),1)
+ifeq ($(strip $(PARITY_INPUT)),)
+$(error PARITY_TEST=1 requires PARITY_INPUT=/path/to/160x120-u8.raw)
+endif
+APP_CFLAGS += -DTINY_RACER_PARITY_TEST=1
+APP_CFLAGS += -DTINY_RACER_PARITY_INPUT_FILE=\"$(notdir $(PARITY_INPUT))\"
+READFS_FILES += $(PARITY_INPUT)
+endif
 
 ifeq ($(STDC_STREAM_ONLY),1)
 APP_CFLAGS += -DSTDC_STREAM_ONLY=1
