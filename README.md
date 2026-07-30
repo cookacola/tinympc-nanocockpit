@@ -124,12 +124,16 @@ three-corner recovery used by the deployed decoder.
 ```shell
 $ source venv/bin/activate
 $ python tools/neural_net_viewtester.py \
-    --nn-weights ../gap8_stdc_release_shared_real_v1 \
+    --nn-weights gap8_stdc_release_shared_real_v1 \
     --view both
 ```
 
 Pass `-n <AI-deck-IP>` for a different address. The window closes with `q`.
-Use `--save --no-display --frames 100` to capture a bounded headless run.
+Use `--save` to save both source frames and
+`tools/stream_out/results.csv`. The CSV contains frame timestamps, inference
+summaries, and the complete raw-quantized and probability 8x10 danger maps.
+Use `--results-out <path.csv>` to record results without saving images, or
+`--save --no-display --frames 100` for a bounded headless capture.
 The `--send-nn-output` switch is intentionally not used with the STDC viewer:
 the legacy streamer reply transports only four floats, whereas this network
 produces corner heatmaps and an obstacle map for the on-board controller.

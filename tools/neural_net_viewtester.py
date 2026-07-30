@@ -16,8 +16,10 @@
 #  color_stream_viewer ergonomics.
 
 import argparse
+import csv
 import importlib
 import importlib.util
+import json
 import os
 import sys
 import threading
@@ -37,6 +39,9 @@ parser = argparse.ArgumentParser(description="View the NanoCockpit AI-deck strea
 parser.add_argument("-n", default="192.168.4.1", metavar="ip", help="AI-deck IP (AP mode default)")
 parser.add_argument("-p", type=int, default=5000, metavar="port", help="AI-deck port")
 parser.add_argument("--save", action="store_true", help="save streamed frames to stream_out/")
+parser.add_argument("--results-out", default=None, metavar="CSV",
+                    help="write per-frame NN results and complete danger maps to CSV; "
+                         "--save defaults this to stream_out/results.csv")
 parser.add_argument("--no-udp-send", action="store_false", dest="udp_send",
                     help="don't send replies over UDP (RTT measurement)")
 parser.add_argument("--render-fps", type=float, default=0.0,
@@ -135,6 +140,57 @@ def run_nn(nn_runner, gray, metadata, tof_frame):
         result = {"network_output": result}
     result.setdefault("inference_ms", elapsed_ms)
     return result
+
+
+RESULT_FIELDS = [
+    "host_time_s", "frame_index", "image", "frame_id",
+    "frame_gap8_timestamp", "state_gap8_timestamp", "state_stm32_timestamp",
+    "inference_ms", "label", "dangerous", "danger_threshold",
+    "max_q", "center_q", "max_danger", "mean_danger",
+    "danger_q_8x10", "danger_probability_8x10",
+]
+
+
+def metadata_value(metadata, name, default=""):
+    return default if metadata is None else getattr(metadata, name, default)
+
+
+def flattened_json(values):
+    if values is None:
+        return ""
+    array = np.asarray(values)
+    if np.issubdtype(array.dtype, np.integer):
+        flattened = [int(value) for value in array.reshape(-1)]
+    else:
+        flattened = [float(value) for value in array.reshape(-1)]
+    return json.dumps(flattened, separators=(",", ":"))
+
+
+def result_row(frame_index, image_name, metadata, result):
+    result = result or {}
+    state = None if metadata is None else getattr(metadata, "state", None)
+    return {
+        "host_time_s": f"{time.time():.6f}",
+        "frame_index": frame_index,
+        "image": image_name,
+        "frame_id": metadata_value(metadata, "frame_id"),
+        "frame_gap8_timestamp": metadata_value(metadata, "frame_timestamp"),
+        "state_gap8_timestamp": metadata_value(metadata, "state_timestamp"),
+        "state_stm32_timestamp":
+            "" if state is None else getattr(state, "timestamp", ""),
+        "inference_ms": result.get("inference_ms", ""),
+        "label": result.get("label", ""),
+        "dangerous": int(bool(result["dangerous"]))
+            if "dangerous" in result else "",
+        "danger_threshold": result.get("danger_threshold", ""),
+        "max_q": result.get("max_q", ""),
+        "center_q": result.get("center_q", ""),
+        "max_danger": result.get("max_danger", ""),
+        "mean_danger": result.get("mean_danger", ""),
+        "danger_q_8x10": flattened_json(result.get("danger_q")),
+        "danger_probability_8x10":
+            flattened_json(result.get("danger_probability")),
+    }
 
 
 def reply_from_result(result):
@@ -341,6 +397,22 @@ def main():
     rx.start()
 
     save_dir = os.path.join(_HERE, "stream_out")
+    results_path = args.results_out
+    if args.save and results_path is None:
+        results_path = os.path.join(save_dir, "results.csv")
+    results_stream = None
+    results_writer = None
+    if results_path:
+        results_path = os.path.abspath(os.path.expanduser(results_path))
+        results_parent = os.path.dirname(results_path)
+        if results_parent:
+            os.makedirs(results_parent, exist_ok=True)
+        results_stream = open(results_path, "w", newline="", encoding="utf-8")
+        results_writer = csv.DictWriter(results_stream,
+                                        fieldnames=RESULT_FIELDS)
+        results_writer.writeheader()
+        results_stream.flush()
+        print(f"Writing NN results to {results_path}")
     count = 0
     if args.save:
         os.makedirs(save_dir, exist_ok=True)
@@ -372,9 +444,16 @@ def main():
 
             if args.save:
                 count += 1
-                cv2.imwrite(os.path.join(save_dir, f"img_{count:06d}.png"), gray)
+                image_name = f"img_{count:06d}.png"
+                cv2.imwrite(os.path.join(save_dir, image_name), gray)
+            else:
+                image_name = ""
 
             shown += 1
+            if results_writer is not None:
+                results_writer.writerow(
+                    result_row(shown, image_name, metadata, nn_result))
+                results_stream.flush()
             if not args.no_display:
                 now = time.time()
                 if args.render_fps <= 0 or (now - last_render) >= 1.0 / args.render_fps:
@@ -401,9 +480,14 @@ def main():
     finally:
         stop_event.set()
         client.shutdown()
+        if results_stream is not None:
+            results_stream.close()
         if not args.no_display:
             cv2.destroyAllWindows()
-        print(f"Done. {shown} frames" + (f", {count} saved to {save_dir}" if args.save else ""))
+        suffix = f", {count} saved to {save_dir}" if args.save else ""
+        if results_path:
+            suffix += f", results saved to {results_path}"
+        print(f"Done. {shown} frames" + suffix)
 
 
 if __name__ == "__main__":

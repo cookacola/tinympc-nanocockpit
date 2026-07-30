@@ -90,6 +90,11 @@ def predict(frame: np.ndarray, metadata, tof_frame, model=None) -> dict:
     return {
         "label": "unsafe" if max_danger >= threshold else "safe",
         "dangerous": max_danger >= threshold,
+        "danger_q": danger_q.astype(np.uint8),
+        "danger_probability": danger_prob.astype(np.float32),
+        "center_q": int(danger_q[DANGER_SHAPE[0] // 2,
+                                     DANGER_SHAPE[1] // 2]),
+        "max_q": int(np.max(danger_q)),
         "confidence": float(np.mean(corner_scores)),
         "corners_px": corners_px,
         # Keep the individual argmax markers for debugging, but do not join

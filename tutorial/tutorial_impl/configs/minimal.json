@@ -1,0 +1,19 @@
+{
+  "repository_root": "../../..",
+  "frontnet_example": "src/gap/examples/pulp-frontnet",
+  "network_name": "frontnet-160x32-bgaug",
+  "host": "aideck.local",
+  "port": 5000,
+  "radio_uri": "radio://0/100/2M/E7E7E7E7E7",
+  "run_hardware_flash": false,
+  "use_gvsoc_test_input": true,
+  "expected": {
+    "network_input_count": 15360,
+    "network_output_count": 4,
+    "network_l2_buffer_size": 352000,
+    "cpx_version": 0,
+    "cpx_streamer_function": 6,
+    "cpx_gap_target": 4,
+    "cpx_wifi_host_target": 3
+  }
+}

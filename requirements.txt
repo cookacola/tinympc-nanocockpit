@@ -31,5 +31,6 @@ pyzmq==19.0.2
 qtm==2.0.6
 scipy==1.13.1
 six==1.17.0
+torch>=2.0
 vispy==0.14.3
 zipp==3.23.0
