@@ -1,2 +1,0 @@
-start_us,end_us,elapsed_s,camera_captures_hz,flow_snapshots_hz,flow_processed_hz,flow_transmitted_hz,cnn_invocations_hz,cnn_completions_hz,flow_snapshot_drops,flow_tx_drops,uart_errors
-30206604,60236907,30.030303,29.337033329300741,15.051463183704806,15.051463183704806,15.051463183704806,15.051463183704806,15.051463183704806,0,0,0

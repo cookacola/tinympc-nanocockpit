@@ -64,29 +64,9 @@
 // The laptop-inference path is the separate examples/streamer application.
 // #define STREAMER_ENABLE
 
-// Emit synthetic obstacle-flow sector frames over the same UART used by gate8.
-// This validates the STM32 receiver and log-only half-space synthesis before the
-// full GAP8 sparse-LK frontend is enabled.
-// #define FLOW_OBSTACLE_TEST_UART
-
-// Flow receiver isolation test: send only synthetic obstacle-flow sector frames.
-// This skips camera capture and the gate8 network entirely.
-// #define FLOW_OBSTACLE_TEST_ONLY
-
-// Run sparse optical flow concurrently with gate8 inference. UART transmission
-// is serialized in main.c so the two producers cannot overlap DMA requests.
-#define FLOW_OBSTACLE_ENABLE
-
 // Execute the real CNN graph with uninitialized weights for timing only.
 // Predictions are invalid. Never enable in a deployable image.
 // #define CNN_TIMING_NO_WEIGHTS
-
-// Camera-only optical-flow isolation test. This skips gate8 inference.
-// #define FLOW_OBSTACLE_CAMERA_TEST
-
-// Camera capture/crop/consumer isolation test. This skips optical flow, UART
-// transmission, and gate8 inference.
-// #define CAMERA_CAPTURE_TEST_ONLY
 
 /**************************** SOC SETTINGS ****************************/
 #define SOC_VOLTAGE                 (1200)

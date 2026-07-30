@@ -21,18 +21,6 @@ APP = pulp_frontnet
 
 APP_CFLAGS  += -I$(CURDIR) -I$(CURDIR)/../../lib
 APP_CFLAGS  += -Werror
-FLOW_FEATURE_COUNT ?= 36
-APP_CFLAGS  += -DFLOW_MAX_FEATURES=$(FLOW_FEATURE_COUNT)
-FLOW_BUILD_ID ?= unknown
-APP_CFLAGS  += -DFLOW_BUILD_ID=\"$(FLOW_BUILD_ID)\"
-CAMERA_FRAME_RATE_HZ ?= 30
-PIPELINE_PERIOD_US ?= 65000
-APP_CFLAGS  += -DHIMAX_FRAME_RATE=$(CAMERA_FRAME_RATE_HZ).0f
-APP_CFLAGS  += -DVISION_PERIOD_US=$(PIPELINE_PERIOD_US)u
-FLOW_DIAGNOSTIC_CAPTURE ?= 0
-APP_CFLAGS  += -DFLOW_DIAGNOSTIC_CAPTURE=$(FLOW_DIAGNOSTIC_CAPTURE)
-FLOW_LEGACY_SECTORS ?= 0
-APP_CFLAGS  += -DFLOW_LEGACY_SECTORS=$(FLOW_LEGACY_SECTORS)
 
 # -O2 with -fno-indirect-inlining is just as fast as -O3 and reduces code size considerably
 # by not inlining of small functions in the management code
@@ -45,7 +33,7 @@ ifeq ($(STDC_STREAM_ONLY),1)
 APP_CFLAGS += -DSTDC_STREAM_ONLY=1
 APP_SRCS += stream_stdc.c
 else
-APP_SRCS += main.c flow_obstacle_uart.c perception_map_uart.c
+APP_SRCS += main.c perception_map_uart.c
 endif
 APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/streamer.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
 APP_SRCS += ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c
