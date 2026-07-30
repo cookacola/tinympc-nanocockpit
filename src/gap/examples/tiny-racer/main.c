@@ -41,6 +41,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 #include <string.h>
 
 #define IMAGE_WIDTH              160
@@ -54,6 +55,15 @@
 #define DANGER_MAP_WIDTH         10
 #define DANGER_MAP_HEIGHT        8
 #define DANGER_MAP_BYTES         (DANGER_MAP_WIDTH * DANGER_MAP_HEIGHT)
+
+/* Quantization parameters and operating threshold from this network's
+ * manifest.json. The danger head emits uint8 quantized logits, not direct
+ * probabilities. */
+#define DANGER_QUANT_EPSILON     0.34079399704933167f
+#define DANGER_QUANT_OFFSET      16.512078149414062f
+#define DANGER_QUANT_BIAS        -0.012773600406944752f
+#define DANGER_PROBABILITY_THRESHOLD 0.07227228581905365f
+#define DANGER_MAX_DARKENING     0.75f
 
 #define NETWORK_L2_WORKSPACE_SIZE 180000
 
@@ -103,8 +113,10 @@ static void copy_network_input(const frame_t *frame) {
 }
 
 /*
- * The danger head produces one uint8 value for each cell of a 10x8 grid.
- * Darken each corresponding 16x15 camera region by at most 75 percent.
+ * The danger head produces one quantized-logit uint8 value for each cell of
+ * a 10x8 grid. Dequantize it into a probability, then darken each
+ * corresponding 16x15 camera region by at most 75 percent above the
+ * calibrated danger threshold.
  * The top and bottom 20 camera rows are left alone because the network did
  * not observe them.
  */
@@ -114,9 +126,17 @@ static void overlay_danger_map(uint8_t *frame, const uint8_t *danger_map) {
 
     for (int map_y = 0; map_y < DANGER_MAP_HEIGHT; ++map_y) {
         for (int map_x = 0; map_x < DANGER_MAP_WIDTH; ++map_x) {
-            const uint8_t danger =
-                danger_map[map_y * DANGER_MAP_WIDTH + map_x];
-            const uint16_t shade = ((uint16_t)danger * 3u) / 4u;
+            const float quantized_danger =
+                (float)danger_map[map_y * DANGER_MAP_WIDTH + map_x];
+            const float logit = quantized_danger * DANGER_QUANT_EPSILON
+                              - DANGER_QUANT_OFFSET + DANGER_QUANT_BIAS;
+            const float probability = 1.0f / (1.0f + expf(-logit));
+            const float danger_strength = probability <= DANGER_PROBABILITY_THRESHOLD
+                ? 0.0f
+                : (probability - DANGER_PROBABILITY_THRESHOLD)
+                    / (1.0f - DANGER_PROBABILITY_THRESHOLD);
+            const uint16_t shade = (uint16_t)(255.0f * DANGER_MAX_DARKENING
+                                               * danger_strength + 0.5f);
             const uint16_t scale = 255u - shade;
             const int first_x = map_x * cell_width;
             const int first_y =
