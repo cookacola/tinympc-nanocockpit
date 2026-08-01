@@ -1,9 +1,9 @@
 # GAP8 sequential QAT DORY package
 
 This is the generated DORY GAP8 application for the fresh two-flight
-(`flight_06`, `flight_07`) sequential QAT model. It is intentionally kept as
-a standalone generated network package for AI-deck testing; it is **not** wired
-into the existing Frontnet controller decoder.
+(`flight_06`, `flight_07`) sequential QAT model. It is packaged for selection
+by Tiny Racer via `NETWORK_NAME=gap8-sequential-bothflights-qat-dory`, but is
+**not** wired into the existing Frontnet controller decoder.
 
 ## ABI
 
@@ -18,11 +18,15 @@ output. `artifacts/` carries the source integer ONNX and export reports.
 
 ## Build
 
-With the GAP SDK and RISC-V toolchain configured, run from this directory:
+With the GAP SDK and RISC-V toolchain configured, run from the Tiny Racer
+example directory:
 
 ```bash
-make CORE=8 build image
+make NETWORK_NAME=gap8-sequential-bothflights-qat-dory CORE=8 build image
 ```
+
+The Tiny Racer adapter excludes DORY's standalone `gap8_main.c` and maps the
+generated `gap8_network_*` API to the standard `network_*` interface.
 
 ## Validation status
 
