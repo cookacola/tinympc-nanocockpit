@@ -1,8 +1,8 @@
 /*
- * Streaming-only HM01B0 application for laptop STDC inference.
+ * Streaming-only HM01B0 application for laptop sequential-model inference.
  *
  * GAP8 captures the normal 160x160 camera frame and sends only the central
- * 160x120 region consumed by shared_dory_frozen_real_v1. No network graph,
+ * 160x120 region consumed by the sequential 12-channel model. No network graph,
  * cluster inference, model weights, or inference workspace is linked or
  * allocated in this build.
  */

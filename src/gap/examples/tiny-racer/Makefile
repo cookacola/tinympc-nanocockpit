@@ -43,7 +43,7 @@ ifeq ($(STDC_STREAM_ONLY),1)
 APP_CFLAGS += -DSTDC_STREAM_ONLY=1
 APP_SRCS += stream_stdc.c
 else
-APP_SRCS += main.c perception_map_uart.c
+APP_SRCS += main.c
 endif
 APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/streamer.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
 APP_SRCS += ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c

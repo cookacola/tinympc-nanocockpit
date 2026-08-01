@@ -52,20 +52,6 @@
 
 #define CORNER_COUNT             4
 #define CORNER_COORD_COUNT       (2 * CORNER_COUNT)
-#define CORNER_HEATMAP_BYTES     4800
-#define DANGER_MAP_WIDTH         10
-#define DANGER_MAP_HEIGHT        8
-#define DANGER_MAP_BYTES         (DANGER_MAP_WIDTH * DANGER_MAP_HEIGHT)
-
-/* Quantization parameters and operating threshold from this network's
- * manifest.json. The danger head emits uint8 quantized logits, not direct
- * probabilities. */
-#define DANGER_QUANT_EPSILON     0.34079399704933167f
-#define DANGER_QUANT_OFFSET      16.512078149414062f
-#define DANGER_QUANT_BIAS        -0.012773600406944752f
-#define DANGER_PROBABILITY_THRESHOLD 0.07227228581905365f
-#define DANGER_MAX_DARKENING     0.75f
-
 #define NETWORK_L2_WORKSPACE_SIZE 180000
 
 #ifdef TINY_RACER_PARITY_TEST
@@ -77,8 +63,9 @@ _Static_assert(CAMERA_CROP_WIDTH == IMAGE_WIDTH,
 _Static_assert(CAMERA_CROP_HEIGHT == IMAGE_HEIGHT,
                "Tiny Racer expects a 160x160 camera crop");
 _Static_assert(GAP8_OUTPUT_BYTES ==
-                   CORNER_HEATMAP_BYTES + DANGER_MAP_BYTES,
-               "Unexpected Tiny Racer network output layout");
+                   PERCEPTION_GRID_WIDTH * PERCEPTION_GRID_HEIGHT *
+                       PERCEPTION_OUTPUT_CHANNELS,
+               "Unexpected sequential network output layout");
 
 static uart_t uart;
 static uart_protocol_t uart_protocol;
@@ -138,12 +125,7 @@ static void run_parity_test(void) {
                          &cluster, &network_done);
     pi_task_wait_on(&network_done);
 
-    printf("PARITY corner_crc32=%08lx danger_crc32=%08lx output_crc32=%08lx\n",
-           (unsigned long)crc32CalculateBuffer(l2_buffer,
-                                               CORNER_HEATMAP_BYTES),
-           (unsigned long)crc32CalculateBuffer(
-               (const uint8_t *)l2_buffer + CORNER_HEATMAP_BYTES,
-               DANGER_MAP_BYTES),
+    printf("PARITY output_crc32=%08lx\n",
            (unsigned long)crc32CalculateBuffer(l2_buffer,
                                                GAP8_OUTPUT_BYTES));
     pmsis_exit(0);
@@ -161,47 +143,6 @@ static void copy_network_input(const frame_t *frame) {
     memcpy(l2_buffer,
            frame->buffer + NETWORK_INPUT_TOP * IMAGE_WIDTH,
            IMAGE_WIDTH * NETWORK_INPUT_HEIGHT);
-}
-
-/*
- * The danger head produces one quantized-logit uint8 value for each cell of
- * a 10x8 grid. Dequantize it into a probability, then darken each
- * corresponding 16x15 camera region by at most 75 percent above the
- * calibrated danger threshold.
- * The top and bottom 20 camera rows are left alone because the network did
- * not observe them.
- */
-static void overlay_danger_map(uint8_t *frame, const uint8_t *danger_map) {
-    const int cell_width = IMAGE_WIDTH / DANGER_MAP_WIDTH;
-    const int cell_height = NETWORK_INPUT_HEIGHT / DANGER_MAP_HEIGHT;
-
-    for (int map_y = 0; map_y < DANGER_MAP_HEIGHT; ++map_y) {
-        for (int map_x = 0; map_x < DANGER_MAP_WIDTH; ++map_x) {
-            const float quantized_danger =
-                (float)danger_map[map_y * DANGER_MAP_WIDTH + map_x];
-            const float logit = quantized_danger * DANGER_QUANT_EPSILON
-                              - DANGER_QUANT_OFFSET + DANGER_QUANT_BIAS;
-            const float probability = 1.0f / (1.0f + expf(-logit));
-            const float danger_strength = probability <= DANGER_PROBABILITY_THRESHOLD
-                ? 0.0f
-                : (probability - DANGER_PROBABILITY_THRESHOLD)
-                    / (1.0f - DANGER_PROBABILITY_THRESHOLD);
-            const uint16_t shade = (uint16_t)(255.0f * DANGER_MAX_DARKENING
-                                               * danger_strength + 0.5f);
-            const uint16_t scale = 255u - shade;
-            const int first_x = map_x * cell_width;
-            const int first_y =
-                NETWORK_INPUT_TOP + map_y * cell_height;
-
-            for (int y = first_y; y < first_y + cell_height; ++y) {
-                uint8_t *row = frame + y * IMAGE_WIDTH;
-                for (int x = first_x; x < first_x + cell_width; ++x) {
-                    row[x] =
-                        (uint8_t)(((uint16_t)row[x] * scale + 127u) / 255u);
-                }
-            }
-        }
-    }
 }
 
 static void draw_corner_marker(uint8_t *frame, float x, float y) {
@@ -272,9 +213,12 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 {
     static PI_FC_L1 co_event_t network_done;
     static PI_FC_L1 float corners[CORNER_COORD_COUNT];
-    static PI_FC_L1 uint8_t corner_confidence[CORNER_COUNT];
+    static PI_FC_L1 float corner_peaks[CORNER_COUNT];
+    static PI_FC_L1 float corner_ambiguity[CORNER_COUNT];
+    static PI_FC_L1 float clearance_m[CORNER_COUNT];
+    static PI_FC_L1 float clearance_confidence[CORNER_COUNT];
     static PI_FC_L1 frame_t *camera_frame;
-    static PI_FC_L1 const uint8_t *danger_map;
+    static PI_FC_L1 int gate_valid;
 
     camera_frame = inference_args->camera_frame;
 
@@ -284,16 +228,19 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     CO_WAIT(&network_done);
     trace_set(TRACE_USER_0, false);
 
-    gap8_decode_corner_argmax((const uint8_t *)l2_buffer, corners,
-                              corner_confidence);
-    (void)gap8_validate_or_recover_gate(corners, corner_confidence);
+    gap8_decode_sequential_output((const uint8_t *)l2_buffer, corners,
+                                  corner_peaks, corner_ambiguity,
+                                  clearance_m, clearance_confidence);
+    gate_valid = gap8_validate_gate_candidate(corners, corner_peaks,
+                                              corner_ambiguity);
 
-    danger_map = (const uint8_t *)l2_buffer + CORNER_HEATMAP_BYTES;
-    overlay_danger_map(camera_frame->buffer, danger_map);
     for (int corner = 0; corner < CORNER_COUNT; ++corner) {
-        draw_corner_marker(camera_frame->buffer,
-                           corners[2 * corner],
-                           corners[2 * corner + 1]);
+        corners[2 * corner + 1] += NETWORK_INPUT_TOP;
+        if (gate_valid) {
+            draw_corner_marker(camera_frame->buffer,
+                               corners[2 * corner],
+                               corners[2 * corner + 1]);
+        }
     }
 
     latest_inference = (inference_stamped_msg_t) {

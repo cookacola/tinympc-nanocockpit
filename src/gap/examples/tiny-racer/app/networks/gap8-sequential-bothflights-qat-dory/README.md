@@ -2,8 +2,7 @@
 
 This is the generated DORY GAP8 application for the fresh two-flight
 (`flight_06`, `flight_07`) sequential QAT model. It is packaged for selection
-by Tiny Racer via `NETWORK_NAME=gap8-sequential-bothflights-qat-dory`, but is
-**not** wired into the existing Frontnet controller decoder.
+by Tiny Racer via `NETWORK_NAME=gap8-sequential-bothflights-qat-dory`.
 
 ## ABI
 
@@ -27,13 +26,16 @@ make NETWORK_NAME=gap8-sequential-bothflights-qat-dory CORE=8 build image
 
 The Tiny Racer adapter excludes DORY's standalone `gap8_main.c` and maps the
 generated `gap8_network_*` API to the standard `network_*` interface.
+Tiny Racer decodes the canonical 12-channel ABI on GAP8: integer corner argmax
+and ambiguity checks, plus spatially averaged fixed-normal offsets and
+confidence scores. The resulting STM32 half-space/TinyMPC integration remains
+outside this GAP8 package.
 
 ## Validation status
 
 - NEMO integer versus ONNX Runtime: exact parity, 0/3,600 differing elements.
 - DORY frontend/lowering: passed; 24 fused layers, 28,152,000 MACs, estimated
   peak L1 tile 36,289 B (below the 64 kB GAP8 limit).
+- Tiny Racer GAP8 build: passed with 100,572 B L2 use (19.18%).
 - GVSOC: not passed. The SDK's `gapy --image` invocation aborted after the
-  generated application compiled successfully. This package is supplied for
-  physical AI-deck-only testing as requested, not as a completed simulator
-  parity release.
+  generated application compiled successfully.

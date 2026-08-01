@@ -4,7 +4,7 @@ APP_CFLAGS += -I$(APP_DIR)
 APP_CFLAGS += -Wno-error=multichar -Wno-error=int-conversion -Wno-error=implicit-function-declaration
 APP_CFLAGS += -Wno-error=incompatible-pointer-types -Wno-error=discarded-qualifiers -Wno-error=attributes
 
-NETWORK_NAME ?= gap8-stdc-real-dory-shared-int8fix-v1
+NETWORK_NAME ?= gap8-sequential-bothflights-qat-dory
 
 NETWORK_DIR = $(APP_DIR)/networks/$(NETWORK_NAME)
 include $(NETWORK_DIR)/network.mk
