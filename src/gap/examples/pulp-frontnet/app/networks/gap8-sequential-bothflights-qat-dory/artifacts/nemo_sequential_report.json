@@ -1,0 +1,245 @@
+{
+  "architecture": "SequentialSTDCNet",
+  "onnx": "/home/cchen/isaacsim-workspace/workspace/gap8_sequential_student_guardshallow_bothflights_nemo/integer/sequential_int.onnx",
+  "operators": [
+    "Add",
+    "Cast",
+    "Clip",
+    "Constant",
+    "Conv",
+    "Div",
+    "Mul"
+  ],
+  "integer_output_shape": [
+    1,
+    12,
+    15,
+    20
+  ],
+  "integer_output_nonzero": 3355,
+  "golden_activation_files": 24,
+  "output_epsilon": 0.11307859420776367,
+  "terminal_score_offset": 6.0,
+  "terminal_output_interpretation": "logical_score = uint8 * output_epsilon - 6.0",
+  "epsilon_modules": [
+    [
+      "stem.2",
+      0.18716473877429962
+    ],
+    [
+      "layers.0.2",
+      0.054990723729133606
+    ],
+    [
+      "layers.1.2",
+      0.2331187129020691
+    ],
+    [
+      "layers.2.2",
+      0.06722474843263626
+    ],
+    [
+      "layers.3.2",
+      0.1407550871372223
+    ],
+    [
+      "layers.4.2",
+      0.05577285215258598
+    ],
+    [
+      "layers.5.2",
+      0.1349320411682129
+    ],
+    [
+      "layers.6.2",
+      0.07633034139871597
+    ],
+    [
+      "layers.7.2",
+      0.1199931874871254
+    ],
+    [
+      "layers.8.2",
+      0.07157720625400543
+    ],
+    [
+      "layers.9.2",
+      0.09535807371139526
+    ],
+    [
+      "layers.10.0.2",
+      0.04815686494112015
+    ],
+    [
+      "layers.10.1.2",
+      0.09367092698812485
+    ],
+    [
+      "layers.11.0.2",
+      0.0562259778380394
+    ],
+    [
+      "layers.11.1.2",
+      0.11598128825426102
+    ],
+    [
+      "layers.12.0.2",
+      0.06006091460585594
+    ],
+    [
+      "layers.12.1.2",
+      0.0998973622918129
+    ],
+    [
+      "layers.13.0.2",
+      0.0683780089020729
+    ],
+    [
+      "layers.13.1.2",
+      0.14030946791172028
+    ],
+    [
+      "layers.14.0.2",
+      0.11692110449075699
+    ],
+    [
+      "layers.14.1.2",
+      0.16590850055217743
+    ],
+    [
+      "layers.15.0.2",
+      0.1197771355509758
+    ],
+    [
+      "layers.15.1.2",
+      0.04539075866341591
+    ],
+    [
+      "output_proj.2",
+      0.11307859420776367
+    ]
+  ],
+  "weight_quantization": [
+    {
+      "name": "stem.0",
+      "minimum": -124,
+      "maximum": 127
+    },
+    {
+      "name": "layers.0.0",
+      "minimum": -85,
+      "maximum": 127
+    },
+    {
+      "name": "layers.1.0",
+      "minimum": -128,
+      "maximum": 123
+    },
+    {
+      "name": "layers.2.0",
+      "minimum": -122,
+      "maximum": 127
+    },
+    {
+      "name": "layers.3.0",
+      "minimum": -128,
+      "maximum": 126
+    },
+    {
+      "name": "layers.4.0",
+      "minimum": -128,
+      "maximum": 123
+    },
+    {
+      "name": "layers.5.0",
+      "minimum": -128,
+      "maximum": 114
+    },
+    {
+      "name": "layers.6.0",
+      "minimum": -128,
+      "maximum": 118
+    },
+    {
+      "name": "layers.7.0",
+      "minimum": -128,
+      "maximum": 115
+    },
+    {
+      "name": "layers.8.0",
+      "minimum": -82,
+      "maximum": 127
+    },
+    {
+      "name": "layers.9.0",
+      "minimum": -128,
+      "maximum": 124
+    },
+    {
+      "name": "layers.10.0.0",
+      "minimum": -122,
+      "maximum": 127
+    },
+    {
+      "name": "layers.10.1.0",
+      "minimum": -128,
+      "maximum": 125
+    },
+    {
+      "name": "layers.11.0.0",
+      "minimum": -99,
+      "maximum": 127
+    },
+    {
+      "name": "layers.11.1.0",
+      "minimum": -128,
+      "maximum": 122
+    },
+    {
+      "name": "layers.12.0.0",
+      "minimum": -124,
+      "maximum": 127
+    },
+    {
+      "name": "layers.12.1.0",
+      "minimum": -128,
+      "maximum": 95
+    },
+    {
+      "name": "layers.13.0.0",
+      "minimum": -95,
+      "maximum": 127
+    },
+    {
+      "name": "layers.13.1.0",
+      "minimum": -124,
+      "maximum": 127
+    },
+    {
+      "name": "layers.14.0.0",
+      "minimum": -113,
+      "maximum": 127
+    },
+    {
+      "name": "layers.14.1.0",
+      "minimum": -128,
+      "maximum": 104
+    },
+    {
+      "name": "layers.15.0.0",
+      "minimum": -128,
+      "maximum": 119
+    },
+    {
+      "name": "layers.15.1.0",
+      "minimum": -114,
+      "maximum": 127
+    },
+    {
+      "name": "output_proj.0",
+      "minimum": -125,
+      "maximum": 127
+    }
+  ],
+  "calibration_split": "train"
+}
