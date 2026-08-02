@@ -137,7 +137,9 @@ class SequentialOutput(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
         ("gate_valid", ctypes.c_uint8),
-        ("_padding", ctypes.c_uint8 * 3),
+        ("gate_rejection_reason", ctypes.c_uint8),
+        ("confident_corner_mask", ctypes.c_uint8),
+        ("_padding", ctypes.c_uint8),
         ("input_crc32", ctypes.c_uint32),
         ("output_crc32", ctypes.c_uint32),
         ("corner_peak_scores", ctypes.c_float * 4),

@@ -35,7 +35,16 @@ CORNER_COLORS = (
     (0, 255, 0),
 )
 CORNER_PEAK_MIN = -0.5
-CORNER_AMBIGUITY_MIN = 0.2
+CORNER_AMBIGUITY_MIN = 0.12
+GATE_REJECTION_REASONS = {
+    0: "accepted",
+    1: "confidence",
+    2: "tri area",
+    3: "tri ratio",
+    4: "quad convexity",
+    5: "quad area",
+    6: "quad ratio",
+}
 
 
 def decode_packed_corners(metadata, width, height):
@@ -73,6 +82,12 @@ def sequential_values(metadata):
         return None
     return {
         "gate_valid": bool(sequential.gate_valid),
+        "gate_rejection_reason": int(
+            getattr(sequential, "gate_rejection_reason", 0)
+        ),
+        "confident_corner_mask": int(
+            getattr(sequential, "confident_corner_mask", 0)
+        ),
         "input_crc32": getattr(sequential, "input_crc32", None),
         "output_crc32": getattr(sequential, "output_crc32", None),
         "corner_peak_scores": tuple(
@@ -132,22 +147,44 @@ def annotate_frame(frame, metadata):
         return display, None, summary
 
     accepted = summary is None or summary["gate_valid"]
-    polygon = np.asarray(corners, dtype=np.int32).reshape((-1, 1, 2))
+    if summary is None:
+        strong_indices = list(range(len(corners)))
+    else:
+        mask = summary["confident_corner_mask"]
+        # Older v12 firmware left these bytes as zero padding. Deriving a
+        # zero mask from its scores keeps saved streams and mixed deployments
+        # readable without changing the wire version.
+        if mask == 0:
+            for index, (peak, ambiguity) in enumerate(zip(
+                    summary["corner_peak_scores"],
+                    summary["corner_ambiguity"])):
+                if peak >= CORNER_PEAK_MIN and \
+                        ambiguity >= CORNER_AMBIGUITY_MIN:
+                    mask |= 1 << index
+        strong_indices = [index for index in range(len(corners))
+                          if mask & (1 << index)]
+    visible_indices = strong_indices if len(strong_indices) == 3 \
+        else list(range(len(corners)))
+    polygon = np.asarray([corners[index] for index in visible_indices],
+                         dtype=np.int32).reshape((-1, 1, 2))
     polygon_color = (255, 255, 255) if accepted else (96, 96, 96)
-    cv2.polylines(display, [polygon], True, polygon_color, 1, cv2.LINE_AA)
+    if len(visible_indices) >= 3:
+        cv2.polylines(display, [polygon], True, polygon_color, 1, cv2.LINE_AA)
     for index, (name, color, point) in enumerate(
             zip(CORNER_NAMES, CORNER_COLORS, corners)):
-        strong = summary is None or (
-            summary["corner_peak_scores"][index] >= CORNER_PEAK_MIN and
-            summary["corner_ambiguity"][index] >= CORNER_AMBIGUITY_MIN
-        )
+        strong = index in strong_indices
+        if len(strong_indices) == 3 and not strong:
+            continue
         marker_color = color if strong else (96, 96, 96)
         cv2.drawMarker(display, point, marker_color, markerType=cv2.MARKER_CROSS,
                        markerSize=10, thickness=1, line_type=cv2.LINE_AA)
         cv2.putText(display, name, (point[0] + 4, point[1] - 4),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, marker_color, 1,
                     cv2.LINE_AA)
-    status = "gate: accepted" if accepted else "gate: candidate rejected"
+    reason = 0 if summary is None else summary["gate_rejection_reason"]
+    status = "gate: accepted" if accepted else "reject: %s" % (
+        GATE_REJECTION_REASONS.get(reason, f"reason {reason}")
+    )
     cv2.putText(display, status, (4, height - 52),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.40,
                 (0, 255, 0) if accepted else (128, 128, 128), 1,
@@ -187,6 +224,7 @@ def main():
                                                          encoding="utf-8")
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("frame", "frame_timestamp_us", "gate_valid",
+                             "gate_rejection_reason", "confident_corner_mask",
                              "tl_x", "tl_y", "tr_x", "tr_y", "br_x", "br_y",
                              "bl_x", "bl_y", "clearance_0_m", "clearance_1_m",
                              "clearance_2_m", "clearance_3_m", "confidence_0",
@@ -210,7 +248,11 @@ def main():
 
             if csv_writer is not None:
                 row = [shown, metadata.frame_timestamp,
-                       "" if summary is None else int(summary["gate_valid"])]
+                       "" if summary is None else int(summary["gate_valid"]),
+                       "" if summary is None else
+                       summary["gate_rejection_reason"],
+                       "" if summary is None else
+                       summary["confident_corner_mask"]]
                 if corners is None:
                     row.extend(("",) * 8)
                 else:
@@ -234,8 +276,13 @@ def main():
                         round(value, 2) for value in summary["corner_peak_scores"])
                     ambiguity = None if summary is None else tuple(
                         round(value, 2) for value in summary["corner_ambiguity"])
+                    reason = None if summary is None else GATE_REJECTION_REASONS.get(
+                        summary["gate_rejection_reason"],
+                        f"reason {summary['gate_rejection_reason']}")
+                    mask = None if summary is None else format(
+                        summary["confident_corner_mask"], "04b")
                     print(f"frame {shown}: {frame.shape}, gate_valid={valid}, "
-                          f"corners={corners}, peaks={peaks}, "
+                          f"reason={reason}, mask={mask}, corners={corners}, peaks={peaks}, "
                           f"ambiguity={ambiguity}")
             else:
                 cv2.imshow("Tiny Racer stream", display)

@@ -43,7 +43,10 @@ typedef enum {
 typedef struct streamer_sequential_output_s {
     /* Ordered corner coordinates remain in the legacy inference fields. */
     uint8_t gate_valid;
-    uint8_t _padding[3];
+    /* Reuses v12 padding, preserving the wire size and compatibility. */
+    uint8_t gate_rejection_reason;
+    uint8_t confident_corner_mask;
+    uint8_t _padding;
     uint32_t input_crc32;
     uint32_t output_crc32;
     float corner_peak_scores[4];

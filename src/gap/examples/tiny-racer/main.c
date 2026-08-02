@@ -234,6 +234,8 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     static PI_FC_L1 float clearance_confidence[CORNER_COUNT];
     static PI_FC_L1 frame_t *camera_frame;
     static PI_FC_L1 int gate_valid;
+    static PI_FC_L1 uint8_t gate_rejection_reason;
+    static PI_FC_L1 uint8_t confident_corner_mask;
 
     camera_frame = inference_args->camera_frame;
 
@@ -247,11 +249,13 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
                                   corner_peaks, corner_ambiguity,
                                   clearance_m, clearance_confidence);
     gate_valid = gap8_validate_gate_candidate(corners, corner_peaks,
-                                              corner_ambiguity);
+                                              corner_ambiguity,
+                                              &gate_rejection_reason,
+                                              &confident_corner_mask);
 
     for (int corner = 0; corner < CORNER_COUNT; ++corner) {
         corners[2 * corner + 1] += NETWORK_INPUT_TOP;
-        if (gate_valid) {
+        if (gate_valid && (confident_corner_mask & (1U << corner))) {
             draw_corner_marker(camera_frame->buffer,
                                corners[2 * corner],
                                corners[2 * corner + 1]);
@@ -261,6 +265,8 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 #if defined(STREAMER_ENABLE)
     latest_sequential = (streamer_sequential_output_t) {
         .gate_valid = gate_valid ? 1 : 0,
+        .gate_rejection_reason = gate_rejection_reason,
+        .confident_corner_mask = confident_corner_mask,
         .input_crc32 = inference_args->input_crc32,
         .output_crc32 = crc32CalculateBuffer(l2_buffer, GAP8_OUTPUT_BYTES),
     };

@@ -4,12 +4,13 @@
 
 #define PERCEPTION_OUTPUT_EPSILON 0.06313495337963104f
 #define PERCEPTION_CORNER_PEAK_MIN (-0.5f)
-#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.2f
+#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.12f
 #define PERCEPTION_MINIMUM_CONFIDENT_CORNERS 3
 #define PERCEPTION_MINIMUM_AREA_PX2 100.0f
 #define PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2 \
     (0.5f * PERCEPTION_MINIMUM_AREA_PX2)
-#define PERCEPTION_MAXIMUM_SIDE_RATIO 6.0f
+#define PERCEPTION_MAXIMUM_TRIANGLE_SIDE_RATIO 8.0f
+#define PERCEPTION_MAXIMUM_QUAD_SIDE_RATIO 6.0f
 
 static float logical_score(uint8_t value) {
     return (float)value * PERCEPTION_OUTPUT_EPSILON
@@ -103,9 +104,12 @@ void gap8_decode_sequential_output(const uint8_t *packed,
 
 int gap8_validate_gate_candidate(const float corners[8],
                                  const float corner_peaks[4],
-                                 const float corner_ambiguity[4]) {
+                                 const float corner_ambiguity[4],
+                                 uint8_t *rejection_reason,
+                                 uint8_t *confident_corner_mask) {
     int confident[4];
     int confident_count = 0;
+    uint8_t confident_mask = 0;
     float signed_area2 = 0.0f;
     float sign = 0.0f;
     float side_min = 0.0f;
@@ -115,9 +119,14 @@ int gap8_validate_gate_candidate(const float corners[8],
         if (corner_peaks[corner] >= PERCEPTION_CORNER_PEAK_MIN &&
             corner_ambiguity[corner] >= PERCEPTION_CORNER_AMBIGUITY_MIN) {
             confident[confident_count++] = corner;
+            confident_mask |= (uint8_t)(1U << corner);
         }
     }
-    if (confident_count < PERCEPTION_MINIMUM_CONFIDENT_CORNERS) return 0;
+    if (confident_corner_mask) *confident_corner_mask = confident_mask;
+    if (confident_count < PERCEPTION_MINIMUM_CONFIDENT_CORNERS) {
+        if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_CONFIDENCE;
+        return 0;
+    }
 
     /* With exactly three confident heatmaps, validate only those observations.
      * The fourth heatmap still supplies a candidate coordinate for telemetry,
@@ -143,9 +152,21 @@ int gap8_validate_gate_candidate(const float corners[8],
             if (edge == 0 || side < side_min) side_min = side;
             if (edge == 0 || side > side_max) side_max = side;
         }
-        return triangle_area >= PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2 &&
-               side_min > 0.0f &&
-               side_max / side_min <= PERCEPTION_MAXIMUM_SIDE_RATIO;
+        if (triangle_area < PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2) {
+            if (rejection_reason) {
+                *rejection_reason = GAP8_GATE_REJECT_TRIANGLE_AREA;
+            }
+            return 0;
+        }
+        if (side_min <= 0.0f ||
+            side_max / side_min > PERCEPTION_MAXIMUM_TRIANGLE_SIDE_RATIO) {
+            if (rejection_reason) {
+                *rejection_reason = GAP8_GATE_REJECT_TRIANGLE_RATIO;
+            }
+            return 0;
+        }
+        if (rejection_reason) *rejection_reason = GAP8_GATE_ACCEPTED;
+        return 1;
     }
 
     for (int edge = 0; edge < 4; ++edge) {
@@ -159,7 +180,12 @@ int gap8_validate_gate_candidate(const float corners[8],
                                    corners[2 * next], corners[2 * next + 1],
                                    corners[2 * after], corners[2 * after + 1]);
         if (edge == 0) sign = cross;
-        if (cross * sign <= 0.0f) return 0;
+        if (cross * sign <= 0.0f) {
+            if (rejection_reason) {
+                *rejection_reason = GAP8_GATE_REJECT_QUAD_CONVEXITY;
+            }
+            return 0;
+        }
         signed_area2 += corners[2 * edge] * corners[2 * next + 1]
                       - corners[2 * next] * corners[2 * edge + 1];
         if (edge == 0 || side < side_min) side_min = side;
@@ -168,6 +194,15 @@ int gap8_validate_gate_candidate(const float corners[8],
 
     const float area = signed_area2 < 0.0f ? -0.5f * signed_area2
                                            : 0.5f * signed_area2;
-    return area >= PERCEPTION_MINIMUM_AREA_PX2 && side_min > 0.0f &&
-           side_max / side_min <= PERCEPTION_MAXIMUM_SIDE_RATIO;
+    if (area < PERCEPTION_MINIMUM_AREA_PX2) {
+        if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_QUAD_AREA;
+        return 0;
+    }
+    if (side_min <= 0.0f ||
+        side_max / side_min > PERCEPTION_MAXIMUM_QUAD_SIDE_RATIO) {
+        if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_QUAD_RATIO;
+        return 0;
+    }
+    if (rejection_reason) *rejection_reason = GAP8_GATE_ACCEPTED;
+    return 1;
 }
