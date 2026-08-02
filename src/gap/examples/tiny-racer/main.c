@@ -276,10 +276,12 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 
     latest_inference = (inference_stamped_msg_t) {
         .stm32_timestamp = inference_args->stm32_timestamp,
-        .x = gate_valid ? encode_corner(corners[0], corners[1]) : 0.0f,
-        .y = gate_valid ? encode_corner(corners[2], corners[3]) : 0.0f,
-        .z = gate_valid ? encode_corner(corners[4], corners[5]) : 0.0f,
-        .phi = gate_valid ? encode_corner(corners[6], corners[7]) : 0.0f,
+        /* Always expose heatmap candidates to the diagnostic streamer. The
+         * explicit gate_valid field remains the acceptance decision. */
+        .x = encode_corner(corners[0], corners[1]),
+        .y = encode_corner(corners[2], corners[3]),
+        .z = encode_corner(corners[4], corners[5]),
+        .phi = encode_corner(corners[6], corners[7]),
     };
 #endif
 

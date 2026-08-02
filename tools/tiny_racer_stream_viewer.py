@@ -34,6 +34,8 @@ CORNER_COLORS = (
     (255, 0, 255),
     (0, 255, 0),
 )
+CORNER_PEAK_MIN = -0.25
+CORNER_AMBIGUITY_MIN = 0.35
 
 
 def decode_packed_corners(metadata, width, height):
@@ -122,8 +124,6 @@ def annotate_frame(frame, metadata):
 
     summary = sequential_values(metadata) if metadata is not None else None
     corners = decode_packed_corners(metadata, width, height)
-    if summary is not None and not summary["gate_valid"]:
-        corners = None
     if corners is None:
         cv2.putText(display, "corners: unavailable", (4, height - 52),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.40, (160, 160, 160), 1,
@@ -131,13 +131,27 @@ def annotate_frame(frame, metadata):
         draw_sequential_summary(display, height, summary)
         return display, None, summary
 
+    accepted = summary is None or summary["gate_valid"]
     polygon = np.asarray(corners, dtype=np.int32).reshape((-1, 1, 2))
-    cv2.polylines(display, [polygon], True, (255, 255, 255), 1, cv2.LINE_AA)
-    for name, color, point in zip(CORNER_NAMES, CORNER_COLORS, corners):
-        cv2.drawMarker(display, point, color, markerType=cv2.MARKER_CROSS,
+    polygon_color = (255, 255, 255) if accepted else (96, 96, 96)
+    cv2.polylines(display, [polygon], True, polygon_color, 1, cv2.LINE_AA)
+    for index, (name, color, point) in enumerate(
+            zip(CORNER_NAMES, CORNER_COLORS, corners)):
+        strong = summary is None or (
+            summary["corner_peak_scores"][index] >= CORNER_PEAK_MIN and
+            summary["corner_ambiguity"][index] >= CORNER_AMBIGUITY_MIN
+        )
+        marker_color = color if strong else (96, 96, 96)
+        cv2.drawMarker(display, point, marker_color, markerType=cv2.MARKER_CROSS,
                        markerSize=10, thickness=1, line_type=cv2.LINE_AA)
         cv2.putText(display, name, (point[0] + 4, point[1] - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, marker_color, 1,
+                    cv2.LINE_AA)
+    status = "gate: accepted" if accepted else "gate: candidate rejected"
+    cv2.putText(display, status, (4, height - 52),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40,
+                (0, 255, 0) if accepted else (128, 128, 128), 1,
+                cv2.LINE_AA)
     draw_sequential_summary(display, height, summary)
     return display, corners, summary
 
@@ -215,7 +229,14 @@ def main():
 
             if args.no_display:
                 if shown == 1 or shown % 30 == 0:
-                    print(f"frame {shown}: {frame.shape}, corners={corners}")
+                    valid = None if summary is None else summary["gate_valid"]
+                    peaks = None if summary is None else tuple(
+                        round(value, 2) for value in summary["corner_peak_scores"])
+                    ambiguity = None if summary is None else tuple(
+                        round(value, 2) for value in summary["corner_ambiguity"])
+                    print(f"frame {shown}: {frame.shape}, gate_valid={valid}, "
+                          f"corners={corners}, peaks={peaks}, "
+                          f"ambiguity={ambiguity}")
             else:
                 cv2.imshow("Tiny Racer stream", display)
                 if cv2.waitKey(1) & 0xFF == ord("q"):

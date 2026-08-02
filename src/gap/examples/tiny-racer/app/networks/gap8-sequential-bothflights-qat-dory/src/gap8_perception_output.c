@@ -3,9 +3,12 @@
 #include <math.h>
 
 #define PERCEPTION_OUTPUT_EPSILON 0.06313495337963104f
-#define PERCEPTION_CORNER_PEAK_MIN 0.0f
-#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.5f
+#define PERCEPTION_CORNER_PEAK_MIN (-0.25f)
+#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.35f
+#define PERCEPTION_MINIMUM_CONFIDENT_CORNERS 3
 #define PERCEPTION_MINIMUM_AREA_PX2 100.0f
+#define PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2 \
+    (0.5f * PERCEPTION_MINIMUM_AREA_PX2)
 #define PERCEPTION_MAXIMUM_SIDE_RATIO 6.0f
 
 static float logical_score(uint8_t value) {
@@ -91,17 +94,50 @@ void gap8_decode_sequential_output(const uint8_t *packed,
 int gap8_validate_gate_candidate(const float corners[8],
                                  const float corner_peaks[4],
                                  const float corner_ambiguity[4]) {
+    int confident[4];
+    int confident_count = 0;
     float signed_area2 = 0.0f;
     float sign = 0.0f;
     float side_min = 0.0f;
     float side_max = 0.0f;
 
     for (int corner = 0; corner < 4; ++corner) {
-        if (corner_peaks[corner] < PERCEPTION_CORNER_PEAK_MIN ||
-            corner_ambiguity[corner] < PERCEPTION_CORNER_AMBIGUITY_MIN) {
-            return 0;
+        if (corner_peaks[corner] >= PERCEPTION_CORNER_PEAK_MIN &&
+            corner_ambiguity[corner] >= PERCEPTION_CORNER_AMBIGUITY_MIN) {
+            confident[confident_count++] = corner;
         }
     }
+    if (confident_count < PERCEPTION_MINIMUM_CONFIDENT_CORNERS) return 0;
+
+    /* With exactly three confident heatmaps, validate only those observations.
+     * The fourth heatmap still supplies a candidate coordinate for telemetry,
+     * but cannot veto an otherwise coherent partial gate. */
+    if (confident_count == 3) {
+        const int a = confident[0];
+        const int b = confident[1];
+        const int c = confident[2];
+        const float triangle_cross = cross2(
+            corners[2 * a], corners[2 * a + 1],
+            corners[2 * b], corners[2 * b + 1],
+            corners[2 * c], corners[2 * c + 1]);
+        const float triangle_area = triangle_cross < 0.0f
+                                      ? -0.5f * triangle_cross
+                                      : 0.5f * triangle_cross;
+        const int triangle[3] = {a, b, c};
+        for (int edge = 0; edge < 3; ++edge) {
+            const int from = triangle[edge];
+            const int to = triangle[(edge + 1) % 3];
+            const float dx = corners[2 * to] - corners[2 * from];
+            const float dy = corners[2 * to + 1] - corners[2 * from + 1];
+            const float side = sqrtf(dx * dx + dy * dy);
+            if (edge == 0 || side < side_min) side_min = side;
+            if (edge == 0 || side > side_max) side_max = side;
+        }
+        return triangle_area >= PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2 &&
+               side_min > 0.0f &&
+               side_max / side_min <= PERCEPTION_MAXIMUM_SIDE_RATIO;
+    }
+
     for (int edge = 0; edge < 4; ++edge) {
         const int next = (edge + 1) & 3;
         const int after = (edge + 2) & 3;
