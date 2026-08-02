@@ -31,6 +31,7 @@ STDC_STREAM_ONLY ?= 0
 PARITY_TEST ?= 0
 STREAMER_ENABLE ?= 0
 UART_SEQUENTIAL_ENABLE ?= 1
+QUIET ?= 0
 
 # The AI-deck cannot use the diagnostic CPX/Wi-Fi streamer and the real-time
 # sequential UART producer in the same image.  The former retains camera
@@ -44,6 +45,10 @@ endif
 
 ifeq ($(UART_SEQUENTIAL_ENABLE),1)
 APP_CFLAGS += -DUART_SEQUENTIAL_ENABLE=1
+endif
+
+ifeq ($(QUIET),1)
+APP_CFLAGS += -DTINY_RACER_QUIET=1
 endif
 
 ifeq ($(PARITY_TEST),1)

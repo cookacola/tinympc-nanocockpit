@@ -26,7 +26,9 @@
 #define __CONFIG_H__
 
 /************************** GENERAL SETTINGS **************************/
+#ifndef TINY_RACER_QUIET
 #define VERBOSE
+#endif
 
 // Enable debug prints in coroutine.h
 // #define CO_VERBOSE

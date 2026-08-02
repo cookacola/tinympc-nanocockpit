@@ -390,6 +390,15 @@ static void main_task(void) {
     cpx_init(&cpx);
     streamer_init(&streamer, &camera, &cpx);
     streamer_alloc_frames(&streamer, &camera);
+#else
+    /*
+     * streamer_alloc_frames() normally supplies the camera buffers.  The
+     * UART-only flight image deliberately excludes the CPX/Wi-Fi streamer, so
+     * it must own those buffers itself.  Starting capture with the zeroed
+     * frame descriptors would otherwise DMA/crop through a NULL pointer and
+     * stop after the first frame.
+     */
+    camera_init_frames_alloc(&camera);
 #endif
 
     cluster_init(&cluster);
