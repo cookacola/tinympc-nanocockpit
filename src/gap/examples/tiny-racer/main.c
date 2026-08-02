@@ -236,9 +236,12 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     static PI_FC_L1 int gate_valid;
     static PI_FC_L1 uint8_t gate_rejection_reason;
     static PI_FC_L1 uint8_t confident_corner_mask;
+#if defined(UART_SEQUENTIAL_ENABLE)
     static PI_FC_L1 uint16_t sequential_sequence;
     static PI_FC_L1 sequential_obstacle_msg_t sequential_uart;
     static PI_FC_L1 co_event_t uart_tx_done;
+    static PI_FC_L1 bool uart_tx_in_flight;
+#endif
 
     camera_frame = inference_args->camera_frame;
 
@@ -294,24 +297,37 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     };
 #endif
 
-    ++sequential_sequence;
-    if (sequential_sequence == 0) ++sequential_sequence;
-    sequential_uart = (sequential_obstacle_msg_t) {
-        .stm32_timestamp = inference_args->stm32_timestamp,
-        .sequence = sequential_sequence,
-        .gate_valid = gate_valid ? 1 : 0,
-    };
-    memcpy(sequential_uart.clearance_m, clearance_m, sizeof(clearance_m));
-    memcpy(sequential_uart.confidence, clearance_confidence,
-           sizeof(clearance_confidence));
-    uart_protocol_send_sequential_async(&uart_protocol, &sequential_uart,
-                                        co_event_init(&uart_tx_done));
-    CO_WAIT(&uart_tx_done);
+#if defined(UART_SEQUENTIAL_ENABLE)
+    /*
+     * UART uses asynchronous DMA. Never make camera capture depend on a TX
+     * completion: if the STM32-side UART is reset, disconnected, or wedged,
+     * waiting here would stop the inference coroutine and exhaust all camera
+     * buffers after a few frames. One packet is enough for the controller, so
+     * keep a single in-flight packet and drop intermediate frames (latest
+     * sample wins) until the DMA completion arrives.
+     */
+    if (!uart_tx_in_flight || co_event_is_done(&uart_tx_done)) {
+        uart_tx_in_flight = false;
+        ++sequential_sequence;
+        if (sequential_sequence == 0) ++sequential_sequence;
+        sequential_uart = (sequential_obstacle_msg_t) {
+            .stm32_timestamp = inference_args->stm32_timestamp,
+            .sequence = sequential_sequence,
+            .gate_valid = gate_valid ? 1 : 0,
+        };
+        memcpy(sequential_uart.clearance_m, clearance_m, sizeof(clearance_m));
+        memcpy(sequential_uart.confidence, clearance_confidence,
+               sizeof(clearance_confidence));
+        uart_protocol_send_sequential_async(&uart_protocol, &sequential_uart,
+                                            co_event_init(&uart_tx_done));
+        uart_tx_in_flight = true;
+    }
+#endif
 
     /*
-     * Gate-corner visualization remains on the diagnostic CPX stream. The
-     * four fixed-normal clearance/confidence pairs are sent to STM32 over the
-     * CRC-protected sequential UART packet above.
+     * In a UART flight image the only outgoing product is the CRC-protected
+     * sequential packet above. CPX/Wi-Fi exists only in an explicitly selected
+     * diagnostic streamer build.
      */
 }
 CO_FN_END()
