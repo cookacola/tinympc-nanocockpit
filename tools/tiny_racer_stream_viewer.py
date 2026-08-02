@@ -4,8 +4,8 @@
 The sequential model runs on GAP8 and the firmware sends its annotated
 grayscale 160x160 frame through the NanoCockpit CPX streamer. The four legacy
 inference floats temporarily contain the four gate-corner positions as
-``y * frame_width + x`` in TL, TR, BR, BL order. Metadata version 11 also
-carries the fixed-normal clearance and confidence summaries.
+``y * frame_width + x`` in TL, TR, BR, BL order. Metadata version 12 also
+carries fixed-normal clearance/confidence summaries and input/output CRCs.
 
 This viewer does not run a neural network locally and never sends inference
 back to the Crazyflie.  It only returns the normal per-frame streamer reply so
@@ -65,12 +65,14 @@ def decode_packed_corners(metadata, width, height):
 
 
 def sequential_values(metadata):
-    """Return the v11 sequential summary, or ``None`` for legacy streams."""
+    """Return the sequential summary, or ``None`` for a v10 legacy stream."""
     sequential = getattr(metadata, "sequential", None)
     if sequential is None:
         return None
     return {
         "gate_valid": bool(sequential.gate_valid),
+        "input_crc32": getattr(sequential, "input_crc32", None),
+        "output_crc32": getattr(sequential, "output_crc32", None),
         "corner_peak_scores": tuple(
             float(value) for value in sequential.corner_peak_scores
         ),
@@ -85,7 +87,7 @@ def sequential_values(metadata):
 
 
 def draw_sequential_summary(display, height, summary):
-    """Draw the v11 fixed-normal summary without obscuring the gate overlay."""
+    """Draw the sequential summary without obscuring the gate overlay."""
     if summary is None:
         return
     clearance = "/".join(f"{value:.2f}" for value in summary["clearance_m"])
@@ -98,6 +100,11 @@ def draw_sequential_summary(display, height, summary):
     cv2.putText(display, f"confidence: {confidence}", (4, height - 6),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.34, (190, 190, 190), 1,
                 cv2.LINE_AA)
+    if summary["input_crc32"] is not None:
+        cv2.putText(display, "crc in/out: %08x/%08x" % (
+            summary["input_crc32"], summary["output_crc32"]),
+            (4, height - 36), cv2.FONT_HERSHEY_SIMPLEX, 0.29,
+            (190, 190, 190), 1, cv2.LINE_AA)
 
 
 def annotate_frame(frame, metadata):
@@ -118,7 +125,7 @@ def annotate_frame(frame, metadata):
     if summary is not None and not summary["gate_valid"]:
         corners = None
     if corners is None:
-        cv2.putText(display, "corners: unavailable", (4, height - 36),
+        cv2.putText(display, "corners: unavailable", (4, height - 52),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.40, (160, 160, 160), 1,
                     cv2.LINE_AA)
         draw_sequential_summary(display, height, summary)
@@ -173,7 +180,7 @@ def main():
                              "corner_peak_0", "corner_peak_1", "corner_peak_2",
                              "corner_peak_3", "corner_ambiguity_0",
                              "corner_ambiguity_1", "corner_ambiguity_2",
-                             "corner_ambiguity_3"))
+                             "corner_ambiguity_3", "input_crc32", "output_crc32"))
 
     client = StreamerClient(host=args.host, port=args.port,
                             udp_send=args.udp_send)
@@ -195,12 +202,13 @@ def main():
                 else:
                     row.extend(np.asarray(corners).flat)
                 if summary is None:
-                    row.extend(("",) * 16)
+                    row.extend(("",) * 18)
                 else:
                     row.extend(summary["clearance_m"])
                     row.extend(summary["clearance_confidence"])
                     row.extend(summary["corner_peak_scores"])
                     row.extend(summary["corner_ambiguity"])
+                    row.extend((summary["input_crc32"], summary["output_crc32"]))
                 csv_writer.writerow(row)
                 csv_file.flush()
                 cv2.imwrite(str(args.save_dir / f"frame_{shown:06d}.png"), display)

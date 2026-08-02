@@ -49,13 +49,13 @@
 #define IMAGE_HEIGHT             160
 #define NETWORK_INPUT_HEIGHT     120
 #define NETWORK_INPUT_TOP        20
+#define NETWORK_INPUT_BYTES      (IMAGE_WIDTH * NETWORK_INPUT_HEIGHT)
 
 #define CORNER_COUNT             4
 #define CORNER_COORD_COUNT       (2 * CORNER_COUNT)
 #define NETWORK_L2_WORKSPACE_SIZE 180000
 
 #ifdef TINY_RACER_PARITY_TEST
-#define NETWORK_INPUT_BYTES       (IMAGE_WIDTH * NETWORK_INPUT_HEIGHT)
 #endif
 
 _Static_assert(CAMERA_CROP_WIDTH == IMAGE_WIDTH,
@@ -89,6 +89,7 @@ static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
 
 typedef struct {
     uint32_t stm32_timestamp;
+    uint32_t input_crc32;
     frame_t *camera_frame;
 } inference_args_t;
 
@@ -188,6 +189,7 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 
     inference_args = (inference_args_t) {
         .stm32_timestamp = latest_state.timestamp,
+        .input_crc32 = crc32CalculateBuffer(l2_buffer, NETWORK_INPUT_BYTES),
         .camera_frame = camera_frame,
     };
     co_fn_push_start(&inference_ctx, inference_task, &inference_args,
@@ -246,6 +248,8 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 
     latest_sequential = (streamer_sequential_output_t) {
         .gate_valid = gate_valid ? 1 : 0,
+        .input_crc32 = inference_args->input_crc32,
+        .output_crc32 = crc32CalculateBuffer(l2_buffer, GAP8_OUTPUT_BYTES),
     };
     memcpy(latest_sequential.corner_peak_scores, corner_peaks,
            sizeof(corner_peaks));

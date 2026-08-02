@@ -39,18 +39,20 @@ typedef enum {
     STREAMER_FORMAT_GRAY_8 = 0
 } __attribute__((packed)) streamer_format_e;
 
-#define STREAMER_METADATA_VERSION 11
+#define STREAMER_METADATA_VERSION 12
 typedef struct streamer_sequential_output_s {
     /* Ordered corner coordinates remain in the legacy inference fields. */
     uint8_t gate_valid;
     uint8_t _padding[3];
+    uint32_t input_crc32;
+    uint32_t output_crc32;
     float corner_peak_scores[4];
     float corner_ambiguity[4];
     float clearance_m[4];
     float clearance_confidence[4];
 } __attribute__((packed)) streamer_sequential_output_t;
 
-_Static_assert(sizeof(streamer_sequential_output_t) == 68,
+_Static_assert(sizeof(streamer_sequential_output_t) == 76,
                "sequential streamer metadata ABI changed");
 
 typedef struct streamer_metadata_s {
@@ -88,7 +90,8 @@ typedef struct streamer_metadata_s {
     // Latest inference computed onboard by GAP
     inference_stamped_msg_t inference;
 
-    // Canonical sequential-model output summary (metadata version 11+)
+    // Canonical sequential-model output summary (metadata version 11+).
+    // Version 12 adds input/output CRC32 fingerprints.
     streamer_sequential_output_t sequential;
 } __attribute__((packed)) streamer_metadata_t;
 
