@@ -101,6 +101,16 @@ void dory_dma_memcpy_2d_async(DMA_copy *copy) {
   }
 }
 
+/* GAP8 has one cluster MCHAN control interface. Having all eight cores issue
+ * independent 3D command streams can lose a completion event and leave one
+ * core blocked forever in mchan_transfer_wait(), typically on a later network
+ * invocation. Serialize only this command-producing path on core 0; all cores
+ * rendezvous in dory_dma_barrier(), while the CNN kernels remain parallel. */
+#ifndef SINGLE_CORE_DMA
+#define SINGLE_CORE_DMA
+#define TINY_RACER_SINGLE_CORE_DMA_OVERRIDE
+#endif
+
 void dory_dma_memcpy_3d_async(DMA_copy *copy) {
 #ifdef SINGLE_CORE_DMA
   if (pi_core_id() == 0) {
@@ -139,6 +149,11 @@ void dory_dma_memcpy_3d_async(DMA_copy *copy) {
   }
 #endif
 }
+
+#ifdef TINY_RACER_SINGLE_CORE_DMA_OVERRIDE
+#undef SINGLE_CORE_DMA
+#undef TINY_RACER_SINGLE_CORE_DMA_OVERRIDE
+#endif
 
 void dory_dma_memcpy_async(DMA_copy *copy) {
   if (copy->hwc_to_chw == 1) {
