@@ -3,8 +3,8 @@
 #include <math.h>
 
 #define PERCEPTION_OUTPUT_EPSILON 0.06313495337963104f
-#define PERCEPTION_CORNER_PEAK_MIN (-0.25f)
-#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.35f
+#define PERCEPTION_CORNER_PEAK_MIN (-0.5f)
+#define PERCEPTION_CORNER_AMBIGUITY_MIN 0.2f
 #define PERCEPTION_MINIMUM_CONFIDENT_CORNERS 3
 #define PERCEPTION_MINIMUM_AREA_PX2 100.0f
 #define PERCEPTION_MINIMUM_TRIANGLE_AREA_PX2 \
@@ -21,6 +21,15 @@ static uint8_t output_at(const uint8_t *packed, int channel, int y, int x) {
                       PERCEPTION_OUTPUT_CHANNELS + channel];
 }
 
+/* The deployed DORY terminal tensor presents its corner pairs right-to-left
+ * relative to the model's semantic TL, TR, BR, BL contract. Keep the public
+ * decoder canonical so validation, telemetry, and downstream control all see
+ * TL, TR, BR, BL rather than compensating only in the diagnostic viewer. */
+static int corner_source_channel(int semantic_corner) {
+    static const uint8_t source_channels[4] = {1, 0, 3, 2};
+    return source_channels[semantic_corner];
+}
+
 static float cross2(float ax, float ay, float bx, float by,
                     float px, float py) {
     return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
@@ -32,7 +41,8 @@ void gap8_decode_sequential_output(const uint8_t *packed,
                                    float corner_ambiguity[4],
                                    float offsets_m[4],
                                    float confidence_scores[4]) {
-    for (int channel = 0; channel < 4; ++channel) {
+    for (int corner = 0; corner < 4; ++corner) {
+        const int channel = corner_source_channel(corner);
         uint8_t best = 0;
         int best_x = 0;
         int best_y = 0;
@@ -59,10 +69,10 @@ void gap8_decode_sequential_output(const uint8_t *packed,
             }
         }
 
-        corners_xy_crop[2 * channel] = 8.0f * (best_x + 0.5f) - 0.5f;
-        corners_xy_crop[2 * channel + 1] = 8.0f * (best_y + 0.5f) - 0.5f;
-        corner_peaks[channel] = logical_score(best);
-        corner_ambiguity[channel] = logical_score(best) - logical_score(second);
+        corners_xy_crop[2 * corner] = 8.0f * (best_x + 0.5f) - 0.5f;
+        corners_xy_crop[2 * corner + 1] = 8.0f * (best_y + 0.5f) - 0.5f;
+        corner_peaks[corner] = logical_score(best);
+        corner_ambiguity[corner] = logical_score(best) - logical_score(second);
     }
 
     for (int field = 0; field < 4; ++field) {

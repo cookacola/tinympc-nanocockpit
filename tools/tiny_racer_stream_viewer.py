@@ -34,8 +34,8 @@ CORNER_COLORS = (
     (255, 0, 255),
     (0, 255, 0),
 )
-CORNER_PEAK_MIN = -0.25
-CORNER_AMBIGUITY_MIN = 0.35
+CORNER_PEAK_MIN = -0.5
+CORNER_AMBIGUITY_MIN = 0.2
 
 
 def decode_packed_corners(metadata, width, height):

@@ -31,6 +31,11 @@ and ambiguity checks, plus spatially averaged fixed-normal offsets and
 confidence scores. The resulting STM32 half-space/TinyMPC integration remains
 outside this GAP8 package.
 
+The Tiny Racer adapter canonicalizes the deployed terminal corner pairs from
+the observed DORY order `TR, TL, BL, BR` to the model contract
+`TL, TR, BR, BL`. The directional clearance and confidence channels retain
+their exported order.
+
 ## Validation status
 
 - NEMO integer versus ONNX Runtime: exact parity, 0/3,600 differing elements.
