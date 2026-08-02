@@ -41,6 +41,12 @@ and ambiguity at least `0.06`. Three-corner candidates retain the 50 px² area
 floor and allow an 8:1 side ratio; four-corner candidates retain the stricter
 100 px² and 6:1 checks. The v12 streamer's former padding bytes carry the
 rejection reason and confident-corner mask without changing its wire size.
+Because one output LSB is about `0.0631`, an ambiguity of zero represents an
+exact quantized tie and is not made confident by lowering the threshold. When
+fewer than three corners pass confidence, four peaks above `-1.0` can instead
+be geometry-rescued if they form a convex quadrilateral of at least 400 px²
+with no more than a 4:1 side ratio. This stricter fallback is reported
+separately in streamer diagnostics.
 
 ## Validation status
 

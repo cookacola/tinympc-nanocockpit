@@ -44,6 +44,7 @@ GATE_REJECTION_REASONS = {
     4: "quad convexity",
     5: "quad area",
     6: "quad ratio",
+    7: "geometry rescue",
 }
 
 
@@ -182,9 +183,11 @@ def annotate_frame(frame, metadata):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.35, marker_color, 1,
                     cv2.LINE_AA)
     reason = 0 if summary is None else summary["gate_rejection_reason"]
-    status = "gate: accepted" if accepted else "reject: %s" % (
-        GATE_REJECTION_REASONS.get(reason, f"reason {reason}")
-    )
+    if accepted:
+        status = "gate: geometry" if reason == 7 else "gate: accepted"
+    else:
+        status = "reject: %s" % GATE_REJECTION_REASONS.get(
+            reason, f"reason {reason}")
     cv2.putText(display, status, (4, height - 52),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.40,
                 (0, 255, 0) if accepted else (128, 128, 128), 1,

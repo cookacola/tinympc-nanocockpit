@@ -16,6 +16,7 @@ typedef enum {
     GAP8_GATE_REJECT_QUAD_CONVEXITY = 4,
     GAP8_GATE_REJECT_QUAD_AREA = 5,
     GAP8_GATE_REJECT_QUAD_RATIO = 6,
+    GAP8_GATE_ACCEPTED_GEOMETRY = 7,
 } gap8_gate_rejection_e;
 
 void gap8_decode_sequential_output(const uint8_t *packed,

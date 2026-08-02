@@ -11,6 +11,9 @@
     (0.5f * PERCEPTION_MINIMUM_AREA_PX2)
 #define PERCEPTION_MAXIMUM_TRIANGLE_SIDE_RATIO 8.0f
 #define PERCEPTION_MAXIMUM_QUAD_SIDE_RATIO 6.0f
+#define PERCEPTION_GEOMETRY_RESCUE_PEAK_MIN (-1.0f)
+#define PERCEPTION_GEOMETRY_RESCUE_MINIMUM_AREA_PX2 400.0f
+#define PERCEPTION_GEOMETRY_RESCUE_MAXIMUM_SIDE_RATIO 4.0f
 
 static float logical_score(uint8_t value) {
     return (float)value * PERCEPTION_OUTPUT_EPSILON
@@ -34,6 +37,40 @@ static int corner_source_channel(int semantic_corner) {
 static float cross2(float ax, float ay, float bx, float by,
                     float px, float py) {
     return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+}
+
+static uint8_t quadrilateral_rejection(const float corners[8],
+                                       float minimum_area,
+                                       float maximum_side_ratio) {
+    float signed_area2 = 0.0f;
+    float sign = 0.0f;
+    float side_min = 0.0f;
+    float side_max = 0.0f;
+
+    for (int edge = 0; edge < 4; ++edge) {
+        const int next = (edge + 1) & 3;
+        const int after = (edge + 2) & 3;
+        const float dx = corners[2 * next] - corners[2 * edge];
+        const float dy = corners[2 * next + 1] - corners[2 * edge + 1];
+        const float side = sqrtf(dx * dx + dy * dy);
+        const float cross = cross2(corners[2 * edge], corners[2 * edge + 1],
+                                   corners[2 * next], corners[2 * next + 1],
+                                   corners[2 * after], corners[2 * after + 1]);
+        if (edge == 0) sign = cross;
+        if (cross * sign <= 0.0f) return GAP8_GATE_REJECT_QUAD_CONVEXITY;
+        signed_area2 += corners[2 * edge] * corners[2 * next + 1]
+                      - corners[2 * next] * corners[2 * edge + 1];
+        if (edge == 0 || side < side_min) side_min = side;
+        if (edge == 0 || side > side_max) side_max = side;
+    }
+
+    const float area = signed_area2 < 0.0f ? -0.5f * signed_area2
+                                           : 0.5f * signed_area2;
+    if (area < minimum_area) return GAP8_GATE_REJECT_QUAD_AREA;
+    if (side_min <= 0.0f || side_max / side_min > maximum_side_ratio) {
+        return GAP8_GATE_REJECT_QUAD_RATIO;
+    }
+    return GAP8_GATE_ACCEPTED;
 }
 
 void gap8_decode_sequential_output(const uint8_t *packed,
@@ -110,8 +147,6 @@ int gap8_validate_gate_candidate(const float corners[8],
     int confident[4];
     int confident_count = 0;
     uint8_t confident_mask = 0;
-    float signed_area2 = 0.0f;
-    float sign = 0.0f;
     float side_min = 0.0f;
     float side_max = 0.0f;
 
@@ -124,6 +159,22 @@ int gap8_validate_gate_candidate(const float corners[8],
     }
     if (confident_corner_mask) *confident_corner_mask = confident_mask;
     if (confident_count < PERCEPTION_MINIMUM_CONFIDENT_CORNERS) {
+        int usable_peak_count = 0;
+        for (int corner = 0; corner < 4; ++corner) {
+            if (corner_peaks[corner] >= PERCEPTION_GEOMETRY_RESCUE_PEAK_MIN) {
+                ++usable_peak_count;
+            }
+        }
+        const uint8_t geometry = quadrilateral_rejection(
+            corners, PERCEPTION_GEOMETRY_RESCUE_MINIMUM_AREA_PX2,
+            PERCEPTION_GEOMETRY_RESCUE_MAXIMUM_SIDE_RATIO);
+        if (usable_peak_count == 4 && geometry == GAP8_GATE_ACCEPTED) {
+            if (confident_corner_mask) *confident_corner_mask = 0x0f;
+            if (rejection_reason) {
+                *rejection_reason = GAP8_GATE_ACCEPTED_GEOMETRY;
+            }
+            return 1;
+        }
         if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_CONFIDENCE;
         return 0;
     }
@@ -169,38 +220,11 @@ int gap8_validate_gate_candidate(const float corners[8],
         return 1;
     }
 
-    for (int edge = 0; edge < 4; ++edge) {
-        const int next = (edge + 1) & 3;
-        const int after = (edge + 2) & 3;
-        const float dx = corners[2 * next] - corners[2 * edge];
-        const float dy = corners[2 * next + 1] - corners[2 * edge + 1];
-        const float side_squared = dx * dx + dy * dy;
-        const float side = sqrtf(side_squared);
-        const float cross = cross2(corners[2 * edge], corners[2 * edge + 1],
-                                   corners[2 * next], corners[2 * next + 1],
-                                   corners[2 * after], corners[2 * after + 1]);
-        if (edge == 0) sign = cross;
-        if (cross * sign <= 0.0f) {
-            if (rejection_reason) {
-                *rejection_reason = GAP8_GATE_REJECT_QUAD_CONVEXITY;
-            }
-            return 0;
-        }
-        signed_area2 += corners[2 * edge] * corners[2 * next + 1]
-                      - corners[2 * next] * corners[2 * edge + 1];
-        if (edge == 0 || side < side_min) side_min = side;
-        if (edge == 0 || side > side_max) side_max = side;
-    }
-
-    const float area = signed_area2 < 0.0f ? -0.5f * signed_area2
-                                           : 0.5f * signed_area2;
-    if (area < PERCEPTION_MINIMUM_AREA_PX2) {
-        if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_QUAD_AREA;
-        return 0;
-    }
-    if (side_min <= 0.0f ||
-        side_max / side_min > PERCEPTION_MAXIMUM_QUAD_SIDE_RATIO) {
-        if (rejection_reason) *rejection_reason = GAP8_GATE_REJECT_QUAD_RATIO;
+    const uint8_t geometry = quadrilateral_rejection(
+        corners, PERCEPTION_MINIMUM_AREA_PX2,
+        PERCEPTION_MAXIMUM_QUAD_SIDE_RATIO);
+    if (geometry != GAP8_GATE_ACCEPTED) {
+        if (rejection_reason) *rejection_reason = geometry;
         return 0;
     }
     if (rejection_reason) *rejection_reason = GAP8_GATE_ACCEPTED;
