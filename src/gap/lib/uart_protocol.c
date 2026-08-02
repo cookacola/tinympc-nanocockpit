@@ -153,3 +153,15 @@ void uart_protocol_send_inference_async(uart_protocol_t *protocol, inference_sta
     protocol->tx_message.inference_stamped = *msg;
     uart_write_async(protocol->uart, &protocol->tx_message, message_size, done_task);
 }
+
+void uart_protocol_send_sequential_async(
+    uart_protocol_t *protocol, const sequential_obstacle_msg_t *msg,
+    pi_task_t *done_task) {
+    sequential_obstacle_packet_t *packet = &protocol->tx_sequential;
+    memcpy(packet->header, UART_SEQUENTIAL_OBSTACLE_MSG_HEADER,
+           UART_HEADER_LENGTH);
+    packet->payload = *msg;
+    packet->checksum = crc32CalculateBuffer(
+        packet, UART_HEADER_LENGTH + sizeof(packet->payload));
+    uart_write_async(protocol->uart, packet, sizeof(*packet), done_task);
+}

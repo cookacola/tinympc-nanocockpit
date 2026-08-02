@@ -236,6 +236,9 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     static PI_FC_L1 int gate_valid;
     static PI_FC_L1 uint8_t gate_rejection_reason;
     static PI_FC_L1 uint8_t confident_corner_mask;
+    static PI_FC_L1 uint16_t sequential_sequence;
+    static PI_FC_L1 sequential_obstacle_msg_t sequential_uart;
+    static PI_FC_L1 co_event_t uart_tx_done;
 
     camera_frame = inference_args->camera_frame;
 
@@ -291,10 +294,24 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     };
 #endif
 
+    ++sequential_sequence;
+    if (sequential_sequence == 0) ++sequential_sequence;
+    sequential_uart = (sequential_obstacle_msg_t) {
+        .stm32_timestamp = inference_args->stm32_timestamp,
+        .sequence = sequential_sequence,
+        .gate_valid = gate_valid ? 1 : 0,
+    };
+    memcpy(sequential_uart.clearance_m, clearance_m, sizeof(clearance_m));
+    memcpy(sequential_uart.confidence, clearance_confidence,
+           sizeof(clearance_confidence));
+    uart_protocol_send_sequential_async(&uart_protocol, &sequential_uart,
+                                        co_event_init(&uart_tx_done));
+    CO_WAIT(&uart_tx_done);
+
     /*
-     * UART inference transmission is intentionally disabled during neural
-     * network bring-up. The annotated frame and temporary corner metadata are
-     * sent only through the CPX streamer.
+     * Gate-corner visualization remains on the diagnostic CPX stream. The
+     * four fixed-normal clearance/confidence pairs are sent to STM32 over the
+     * CRC-protected sequential UART packet above.
      */
 }
 CO_FN_END()
