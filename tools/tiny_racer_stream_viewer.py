@@ -35,7 +35,7 @@ CORNER_COLORS = (
     (0, 255, 0),
 )
 CORNER_PEAK_MIN = -0.5
-CORNER_AMBIGUITY_MIN = 0.12
+CORNER_AMBIGUITY_MIN = 0.06
 GATE_REJECTION_REASONS = {
     0: "accepted",
     1: "confidence",

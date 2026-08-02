@@ -37,7 +37,7 @@ the observed DORY order `TR, TL, BL, BR` to the model contract
 their exported order.
 
 Gate validation accepts three corner heatmaps with peak score at least `-0.5`
-and ambiguity at least `0.12`. Three-corner candidates retain the 50 px² area
+and ambiguity at least `0.06`. Three-corner candidates retain the 50 px² area
 floor and allow an 8:1 side ratio; four-corner candidates retain the stricter
 100 px² and 6:1 checks. The v12 streamer's former padding bytes carry the
 rejection reason and confident-corner mask without changing its wire size.
