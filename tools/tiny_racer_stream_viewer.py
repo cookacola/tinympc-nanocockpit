@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Display the annotated video stream from the Tiny Racer GAP8 firmware.
 
-The firmware sends a grayscale 160x160 frame through the NanoCockpit CPX
-streamer.  Its 10x8 danger map has already darkened the corresponding image
-regions on GAP8.  The four legacy inference floats temporarily contain the
-four corner positions as ``y * frame_width + x`` in TL, TR, BR, BL order.
+The sequential model runs on GAP8 and the firmware sends its annotated
+grayscale 160x160 frame through the NanoCockpit CPX streamer. The four legacy
+inference floats temporarily contain the four gate-corner positions as
+``y * frame_width + x`` in TL, TR, BR, BL order. Fixed-normal clearance and
+confidence fields are not carried by this legacy streaming metadata.
 
 This viewer does not run a neural network locally and never sends inference
 back to the Crazyflie.  It only returns the normal per-frame streamer reply so
