@@ -29,6 +29,11 @@ APP_LDFLAGS += -g -Wl,--print-memory-usage -flto
 
 STDC_STREAM_ONLY ?= 0
 PARITY_TEST ?= 0
+STREAMER_ENABLE ?= 0
+
+ifeq ($(STREAMER_ENABLE),1)
+APP_CFLAGS += -DSTREAMER_ENABLE=1
+endif
 
 ifeq ($(PARITY_TEST),1)
 ifeq ($(strip $(PARITY_INPUT)),)

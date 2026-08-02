@@ -262,6 +262,10 @@ void gap8_network_run_cluster(void *args) {
 /* ---------------------------------- */
   directional_allocator_init(l2_buffer, l2_buffer_size);
 
+  /* Tiny Racer supplies its camera crop at the front of the L2 workspace.
+   * Preserve it before the directional allocator reuses that memory. */
+  cl_ram_write(L3_input, l2_buffer, activations_size[0]);
+
 /* ---------------------------------- */
 /* --------- SECTION 1 END ---------- */
 /* ---------------------------------- */
@@ -284,8 +288,10 @@ void gap8_network_run_cluster(void *args) {
   - read weights
 */
     L2_output = dmalloc(activations_out_size[i], !dir);
-    if (L3_input_layers[i] == 1)
+    if (L3_input_layers[i] == 1) {
       L2_input = dmalloc(activations_size[i], dir);
+      cl_ram_read(L2_input, L3_input, activations_size[i]);
+    }
 
     if (layer_with_weights[i] == 1)
       L2_weights = dmalloc(weights_size[i], dir);

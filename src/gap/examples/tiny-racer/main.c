@@ -53,7 +53,8 @@
 
 #define CORNER_COUNT             4
 #define CORNER_COORD_COUNT       (2 * CORNER_COUNT)
-#define NETWORK_L2_WORKSPACE_SIZE 180000
+/* Layer 2 peaks at 76,800 B input + 115,200 B output + 768 B weights. */
+#define NETWORK_L2_WORKSPACE_SIZE 200000
 
 #ifdef TINY_RACER_PARITY_TEST
 #endif
@@ -70,22 +71,28 @@ _Static_assert(GAP8_OUTPUT_BYTES ==
 static uart_t uart;
 static uart_protocol_t uart_protocol;
 static camera_t camera;
+#if defined(STREAMER_ENABLE)
 static cpx_t cpx;
 static streamer_t streamer;
+#endif
 static pi_device_t cluster;
 
 static PI_FC_L1 state_msg_t latest_state;
 static PI_FC_L1 uint32_t state_timestamp;
 static PI_FC_L1 tof_msg_t latest_tof;
 static PI_FC_L1 uint32_t tof_timestamp;
+#if defined(STREAMER_ENABLE)
 static PI_L2 inference_stamped_msg_t latest_inference;
 static PI_L2 streamer_sequential_output_t latest_sequential;
+#endif
 
 static void *l2_buffer;
 static size_t l2_buffer_size;
 
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
+#if defined(STREAMER_ENABLE)
 static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
+#endif
 
 typedef struct {
     uint32_t stm32_timestamp;
@@ -135,7 +142,9 @@ static void run_parity_test(void) {
 #endif
 
 CO_FN_DECLARE(inference_task);
+#if defined(STREAMER_ENABLE)
 CO_FN_DECLARE(streamer_rx_task);
+#endif
 
 /*
  * The network sees the middle 160x120 portion of the 160x160 camera frame.
@@ -183,7 +192,9 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
 {
     static PI_FC_L1 inference_args_t inference_args;
     static PI_FC_L1 co_event_t inference_done;
+#if defined(STREAMER_ENABLE)
     static PI_FC_L1 co_event_t streamer_tx_done;
+#endif
 
     copy_network_input(camera_frame);
 
@@ -196,10 +207,10 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
                      co_event_init(&inference_done));
     CO_WAIT(&inference_done);
 
-    /*
-     * inference_task has finished modifying this frame. Only now may the
-     * streamer read it.
-     */
+#if defined(STREAMER_ENABLE)
+    /* The streamer reads the camera buffer asynchronously, so retain this
+     * frame until CPX has sent it.  This mode intentionally depends on a
+     * healthy NINA/host link; it is not enabled for flight firmware. */
     streamer_send_frame_async(
         &streamer,
         camera_frame,
@@ -209,6 +220,7 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
         co_event_init(&streamer_tx_done)
     );
     CO_WAIT(&streamer_tx_done);
+#endif
 }
 CO_FN_END()
 
@@ -246,6 +258,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
         }
     }
 
+#if defined(STREAMER_ENABLE)
     latest_sequential = (streamer_sequential_output_t) {
         .gate_valid = gate_valid ? 1 : 0,
         .input_crc32 = inference_args->input_crc32,
@@ -268,6 +281,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
         .z = gate_valid ? encode_corner(corners[4], corners[5]) : 0.0f,
         .phi = gate_valid ? encode_corner(corners[6], corners[7]) : 0.0f,
     };
+#endif
 
     /*
      * UART inference transmission is intentionally disabled during neural
@@ -277,6 +291,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 }
 CO_FN_END()
 
+#if defined(STREAMER_ENABLE)
 static void streamer_rx_start(void) {
     co_fn_push_start(&streamer_rx_ctx, streamer_rx_task, NULL, NULL);
 }
@@ -306,6 +321,7 @@ CO_FN_BEGIN(streamer_rx_task, void *, arg)
     }
 }
 CO_FN_END()
+#endif
 
 CO_FN_BEGIN(uart_callback, uart_msg_t *, message)
 {
@@ -329,9 +345,11 @@ static void main_task(void) {
 
     camera_init(&camera, camera_callback);
 
+#if defined(STREAMER_ENABLE)
     cpx_init(&cpx);
     streamer_init(&streamer, &camera, &cpx);
     streamer_alloc_frames(&streamer, &camera);
+#endif
 
     cluster_init(&cluster);
     mem_init();
@@ -355,8 +373,10 @@ static void main_task(void) {
     VERBOSE_PRINT("\n\t *** Initialization done ***\n\n");
 
     uart_protocol_start(&uart_protocol);
+#if defined(STREAMER_ENABLE)
     cpx_start(&cpx);
     streamer_rx_start();
+#endif
     camera_start(&camera);
 
     while (true) {
