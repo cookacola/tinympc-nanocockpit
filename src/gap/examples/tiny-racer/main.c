@@ -79,6 +79,7 @@ static PI_FC_L1 uint32_t state_timestamp;
 static PI_FC_L1 tof_msg_t latest_tof;
 static PI_FC_L1 uint32_t tof_timestamp;
 static PI_L2 inference_stamped_msg_t latest_inference;
+static PI_L2 streamer_sequential_output_t latest_sequential;
 
 static void *l2_buffer;
 static size_t l2_buffer_size;
@@ -243,12 +244,25 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
         }
     }
 
+    latest_sequential = (streamer_sequential_output_t) {
+        .gate_valid = gate_valid ? 1 : 0,
+    };
+    memcpy(latest_sequential.corner_peak_scores, corner_peaks,
+           sizeof(corner_peaks));
+    memcpy(latest_sequential.corner_ambiguity, corner_ambiguity,
+           sizeof(corner_ambiguity));
+    memcpy(latest_sequential.clearance_m, clearance_m,
+           sizeof(clearance_m));
+    memcpy(latest_sequential.clearance_confidence, clearance_confidence,
+           sizeof(clearance_confidence));
+    streamer_set_sequential_output(&streamer, &latest_sequential);
+
     latest_inference = (inference_stamped_msg_t) {
         .stm32_timestamp = inference_args->stm32_timestamp,
-        .x = encode_corner(corners[0], corners[1]),
-        .y = encode_corner(corners[2], corners[3]),
-        .z = encode_corner(corners[4], corners[5]),
-        .phi = encode_corner(corners[6], corners[7]),
+        .x = gate_valid ? encode_corner(corners[0], corners[1]) : 0.0f,
+        .y = gate_valid ? encode_corner(corners[2], corners[3]) : 0.0f,
+        .z = gate_valid ? encode_corner(corners[4], corners[5]) : 0.0f,
+        .phi = gate_valid ? encode_corner(corners[6], corners[7]) : 0.0f,
     };
 
     /*

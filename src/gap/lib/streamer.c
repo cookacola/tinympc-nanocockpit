@@ -116,6 +116,7 @@ void streamer_init(streamer_t *streamer, camera_t *camera, cpx_t *cpx) {
     streamer->cpx_req->header = CPX_HEADER_INIT(CPX_T_WIFI_HOST, CPX_F_STREAMER);
 
     streamer->buffer_rx = NULL;
+    streamer->sequential = (streamer_sequential_output_t){0};
     cpx_register_rx_callback(cpx, CPX_F_STREAMER, streamer_cpx_callback, (void *)streamer);
 
 #if defined(STREAMER_DISABLE)
@@ -126,6 +127,14 @@ void streamer_init(streamer_t *streamer, camera_t *camera, cpx_t *cpx) {
 #else
     VERBOSE_PRINT("Streamer init:\t\t\tOK\n");
 #endif
+}
+
+void streamer_set_sequential_output(
+    streamer_t *streamer,
+    const streamer_sequential_output_t *sequential
+) {
+    streamer->sequential = sequential ? *sequential
+                                    : (streamer_sequential_output_t){0};
 }
 
 void streamer_alloc_frames(streamer_t *streamer, camera_t *camera) {
@@ -218,7 +227,8 @@ void streamer_send_frame_async(
         .reply_frame_timestamp = streamer->reply_frame_timestamp,
         .reply_recv_timestamp = streamer->reply_recv_timestamp,
 
-        .inference = *inference
+        .inference = *inference,
+        .sequential = streamer->sequential,
     };
 
     co_fn_push_start(&frame->send_ctx, streamer_send_task, (void *)frame, done_task);
@@ -275,6 +285,7 @@ void streamer_send_frame_region_async(
         .reply_frame_timestamp = streamer->reply_frame_timestamp,
         .reply_recv_timestamp = streamer->reply_recv_timestamp,
         .inference = *inference,
+        .sequential = streamer->sequential,
     };
     co_fn_push_start(&frame->send_ctx, streamer_send_task, (void *)frame, done_task);
 }

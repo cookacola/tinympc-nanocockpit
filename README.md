@@ -149,7 +149,9 @@ $ python tools/tiny_racer_stream_viewer.py -n 192.168.4.1
 
 Press `q` to close. Add `--save-dir stream_out/tiny-racer` to retain the
 annotated frames and decoded corners CSV. The fixed-normal clearance and
-confidence fields are not transported by this legacy streaming metadata.
+confidence fields are included in metadata version 11 and displayed/saved by
+the viewer. Update the GAP8 firmware and this Python client together; older
+metadata version 10 streams remain readable but do not carry these values.
 
 ## Literature review
 In our paper, we review the body of work on nanorobotics over the last five years and demonstrate both the high research interest in the topic and the Crazyflie's prominent status as de-facto standard robot platform.

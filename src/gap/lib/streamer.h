@@ -39,7 +39,20 @@ typedef enum {
     STREAMER_FORMAT_GRAY_8 = 0
 } __attribute__((packed)) streamer_format_e;
 
-#define STREAMER_METADATA_VERSION 10
+#define STREAMER_METADATA_VERSION 11
+typedef struct streamer_sequential_output_s {
+    /* Ordered corner coordinates remain in the legacy inference fields. */
+    uint8_t gate_valid;
+    uint8_t _padding[3];
+    float corner_peak_scores[4];
+    float corner_ambiguity[4];
+    float clearance_m[4];
+    float clearance_confidence[4];
+} __attribute__((packed)) streamer_sequential_output_t;
+
+_Static_assert(sizeof(streamer_sequential_output_t) == 68,
+               "sequential streamer metadata ABI changed");
+
 typedef struct streamer_metadata_s {
     // Metadata format version, always equal to STREAMER_METADATA_VERSION
     uint8_t metadata_version;
@@ -74,6 +87,9 @@ typedef struct streamer_metadata_s {
 
     // Latest inference computed onboard by GAP
     inference_stamped_msg_t inference;
+
+    // Canonical sequential-model output summary (metadata version 11+)
+    streamer_sequential_output_t sequential;
 } __attribute__((packed)) streamer_metadata_t;
 
 typedef struct streamer_stats_s {
@@ -135,10 +151,16 @@ typedef struct streamer_s {
 
     uint32_t reply_frame_timestamp;
     uint32_t reply_recv_timestamp;
+
+    streamer_sequential_output_t sequential;
 } streamer_t;
 
 void streamer_init(streamer_t *streamer, camera_t *camera, cpx_t *cpx);
 void streamer_alloc_frames(streamer_t *streamer, camera_t *camera);
+void streamer_set_sequential_output(
+    streamer_t *streamer,
+    const streamer_sequential_output_t *sequential
+);
 void streamer_send_frame_async(
     streamer_t *streamer,
     frame_t *frame,
