@@ -99,8 +99,8 @@ void gap8_BNReluConvolution5(
   volatile unsigned short  W_tile_size_byte;
   volatile unsigned short W_length_nif_byte;
   volatile uint8_t *x, *W, *y, *b;
-  volatile int32_t *k;
-  volatile int32_t *lambda;
+  volatile int64_t *k;
+  volatile int64_t *lambda;
   volatile int y_tile_size_nof;
   volatile int y_tile_size_h;
   volatile int y_tile_size_w;
@@ -112,7 +112,7 @@ void gap8_BNReluConvolution5(
   int _i_nof_load=0, _i_nif_load=0, _i_h_load=0, _i_w_load=0;
   int _i_nof_exec=1, _i_nif_exec=1, _i_h_exec=1, _i_w_exec=1;
   volatile uint8_t *im2col;
-  im2col = l1_buffer + 32312;
+  im2col = l1_buffer + 32440;
   volatile uint8_t *pwt_buffer;
   pwt_buffer = im2col + 696;
   uint16_t out_mult = out_mult_in;
@@ -168,23 +168,23 @@ void gap8_BNReluConvolution5(
         dory_dma_memcpy_async(&DMA_copy_W);
         dory_dma_barrier(&DMA_copy_W);
 
-        DMA_copy_k.ext = (uint32_t) l2_W+288 + 64*_i_nof_load;
+        DMA_copy_k.ext = (uint32_t) l2_W+288 + 128*_i_nof_load;
         DMA_copy_k.loc = (uint32_t) l1_buffer + 32168;
-        DMA_copy_k.length_1d_copy = (uint16_t) W_tile_size_nof * 4;
+        DMA_copy_k.length_1d_copy = (uint16_t) W_tile_size_nof * 8;
         dory_dma_memcpy_async(&DMA_copy_k);
         dory_dma_barrier(&DMA_copy_k);
 
-        DMA_copy_lambda.ext = (uint32_t) l2_W+416 + 64*_i_nof_load;
-        DMA_copy_lambda.loc = (uint32_t) l1_buffer + 32240;
-        DMA_copy_lambda.length_1d_copy = (uint16_t) W_tile_size_nof * 4;
+        DMA_copy_lambda.ext = (uint32_t) l2_W+544 + 128*_i_nof_load;
+        DMA_copy_lambda.loc = (uint32_t) l1_buffer + 32304;
+        DMA_copy_lambda.length_1d_copy = (uint16_t) W_tile_size_nof * 8;
         dory_dma_memcpy_async(&DMA_copy_lambda);
         dory_dma_barrier(&DMA_copy_lambda);
       }
     // creation of the pointers to input, output, weights, lambda and k
     asm volatile("": : :"memory");
     x = (uint8_t *) (l1_buffer + 0);
-    k = (int32_t *) (l1_buffer + 32168);
-    lambda = (int32_t *) (l1_buffer + 32240);
+    k = (int64_t *) (l1_buffer + 32168);
+    lambda = (int64_t *) (l1_buffer + 32304);
     W = (uint8_t *) (l1_buffer + 32016);
     y = (uint8_t *) (l1_buffer + 16648);
     p_r = 0;

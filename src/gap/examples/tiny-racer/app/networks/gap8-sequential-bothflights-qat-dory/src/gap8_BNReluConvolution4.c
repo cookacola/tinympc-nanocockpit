@@ -99,8 +99,8 @@ void gap8_BNReluConvolution4(
   volatile unsigned short  W_tile_size_byte;
   volatile unsigned short W_length_nif_byte;
   volatile uint8_t *x, *W, *y, *b;
-  volatile int32_t *k;
-  volatile int32_t *lambda;
+  volatile int64_t *k;
+  volatile int64_t *lambda;
   volatile int y_tile_size_nof;
   volatile int y_tile_size_h;
   volatile int y_tile_size_w;
@@ -112,7 +112,7 @@ void gap8_BNReluConvolution4(
   int _i_nof_load=0, _i_nif_load=0, _i_h_load=0, _i_w_load=0;
   int _i_nof_exec=1, _i_nif_exec=1, _i_h_exec=1, _i_w_exec=1;
   volatile uint8_t *im2col;
-  im2col = l1_buffer + 36008;
+  im2col = l1_buffer + 36264;
   uint16_t out_mult = out_mult_in;
   uint16_t out_shift = out_shift_in;
 
@@ -167,22 +167,22 @@ void gap8_BNReluConvolution4(
         dory_dma_memcpy_async(&DMA_copy_W);
         dory_dma_barrier(&DMA_copy_W);
 
-        DMA_copy_k.ext = (uint32_t) l2_W+768 + 128*_i_nof_load;
+        DMA_copy_k.ext = (uint32_t) l2_W+768 + 256*_i_nof_load;
         DMA_copy_k.loc = (uint32_t) l1_buffer + 35736;
-        DMA_copy_k.length_1d_copy = (uint16_t) W_tile_size_nof * 4;
+        DMA_copy_k.length_1d_copy = (uint16_t) W_tile_size_nof * 8;
         dory_dma_memcpy_async(&DMA_copy_k);
         dory_dma_barrier(&DMA_copy_k);
 
-        DMA_copy_lambda.ext = (uint32_t) l2_W+896 + 128*_i_nof_load;
-        DMA_copy_lambda.loc = (uint32_t) l1_buffer + 35872;
-        DMA_copy_lambda.length_1d_copy = (uint16_t) W_tile_size_nof * 4;
+        DMA_copy_lambda.ext = (uint32_t) l2_W+1024 + 256*_i_nof_load;
+        DMA_copy_lambda.loc = (uint32_t) l1_buffer + 36000;
+        DMA_copy_lambda.length_1d_copy = (uint16_t) W_tile_size_nof * 8;
         dory_dma_memcpy_async(&DMA_copy_lambda);
         dory_dma_barrier(&DMA_copy_lambda);
       }
     // creation of the pointers to input, output, weights, lambda and k
     x = (uint8_t *) (l1_buffer + 0);
-    k = (int32_t *) (l1_buffer + 35736);
-    lambda = (int32_t *) (l1_buffer + 35872);
+    k = (int64_t *) (l1_buffer + 35736);
+    lambda = (int64_t *) (l1_buffer + 36000);
     W = (uint8_t *) (l1_buffer + 34960);
     y = (uint8_t *) (l1_buffer + 14984);
     p_r = 0;

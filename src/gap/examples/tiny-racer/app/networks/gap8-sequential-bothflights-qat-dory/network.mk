@@ -3,9 +3,9 @@ CORE ?= 8
 FLASH_TYPE ?= HYPERFLASH
 RAM_TYPE ?= HYPERRAM
 
-# gap8_main.c belongs to DORY's standalone validation application; Tiny Racer
-# supplies its own application main.
-APP_SRCS += $(filter-out $(NETWORK_DIR)/src/gap8_main.c,$(wildcard $(NETWORK_DIR)/src/*.c))
+# These sources belong to DORY's standalone checksum application; Tiny Racer
+# supplies its own application main and receives camera input directly.
+APP_SRCS += $(filter-out $(NETWORK_DIR)/src/gap8_main.c $(NETWORK_DIR)/src/gap8_checksum_input.c,$(wildcard $(NETWORK_DIR)/src/*.c))
 APP_CFLAGS += -I$(NETWORK_DIR)/inc
 APP_CFLAGS += -DNUM_CORES=$(CORE) -DGAP8_SEQUENTIAL_NETWORK=1
 APP_CFLAGS += -Wno-error -O2 -fno-indirect-inlining -flto

@@ -8,7 +8,7 @@ by Tiny Racer via `NETWORK_NAME=gap8-sequential-bothflights-qat-dory`.
 
 - Input: unsigned HM01B0 grayscale, NCHW `[1, 1, 120, 160]` (19,200 bytes).
 - Output: unsigned HWC `[15, 20, 12]` (3,600 bytes).
-- Output interpretation: `logical_score = uint8 * 0.1130785942 - 6.0`.
+- Output interpretation: `logical_score = uint8 * 0.0631349534 - 6.0`.
 - Channels 0–3 are ordered corner heatmaps; 4–7 are fixed-normal clearance
   scores; 8–11 are directional confidence scores.
 
@@ -35,7 +35,10 @@ outside this GAP8 package.
 
 - NEMO integer versus ONNX Runtime: exact parity, 0/3,600 differing elements.
 - DORY frontend/lowering: passed; 24 fused layers, 28,152,000 MACs, estimated
-  peak L1 tile 36,289 B (below the 64 kB GAP8 limit).
-- Tiny Racer GAP8 build: passed with 100,572 B L2 use (19.18%).
-- GVSOC: not passed. The SDK's `gapy --image` invocation aborted after the
-  generated application compiled successfully.
+  peak L1 tile 36,417 B (below the 64 kB GAP8 limit). The folded BN affine
+  calculation uses DORY's 64-bit intermediate because layer 12 exceeds signed
+  int32 on the validated fixture.
+- Tiny Racer GAP8 build: passed with 101,860 B L2 use (19.43%).
+- GVSOC: not passed. The installed launcher aborts before application output;
+  this is distinct from the successful 24-layer hardware CRC diagnostic for
+  the same 64-bit DORY path.
