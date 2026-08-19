@@ -73,6 +73,10 @@ held-out false-positive rate of 0.653 (AP 0.282), well below the full ESPNet
 teacher. Its package is retained so the NEMO/DORY/GAP8 integration can be
 reproduced and debugged, but it must not be selected for free flight.
 
+A short NEMO QAT follow-up was also rejected: held-out collision AP improved
+to 0.659, but recall fell to 0.888, danger-map IoU collapsed to 0, and the gate
+mask activated on essentially every negative pixel. It is not packaged.
+
 The recommended perception checkpoint remains the safety-selected full ESPNet
 teacher. Promote a compact firmware package only after its validation-selected
 threshold passes the held-out obstacle metrics and its NEMO, GVSOC, and live
