@@ -47,29 +47,46 @@
 
 #define IMAGE_WIDTH              160
 #define IMAGE_HEIGHT             160
+#ifdef GAP8_TEMPORAL_NETWORK
+#define NETWORK_INPUT_HEIGHT     160
+#define NETWORK_INPUT_TOP        0
+#define NETWORK_INPUT_CHANNELS   2
+#define CORNER_HEATMAP_BYTES     6400
+#define GATE_MASK_BYTES          1600
+#define DANGER_MAP_WIDTH         10
+#define DANGER_MAP_HEIGHT        10
+#define DANGER_MAP_BYTES         100
+#define DANGER_MAP_OFFSET        (CORNER_HEATMAP_BYTES + GATE_MASK_BYTES)
+#define NETWORK_L2_WORKSPACE_SIZE 220000
+#else
 #define NETWORK_INPUT_HEIGHT     120
 #define NETWORK_INPUT_TOP        20
+#define NETWORK_INPUT_CHANNELS   1
+#define CORNER_HEATMAP_BYTES     4800
+#define GATE_MASK_BYTES          0
+#define DANGER_MAP_WIDTH         10
+#define DANGER_MAP_HEIGHT        8
+#define DANGER_MAP_BYTES         80
+#define DANGER_MAP_OFFSET        CORNER_HEATMAP_BYTES
+#define NETWORK_L2_WORKSPACE_SIZE 180000
+#endif
 
 #define CORNER_COUNT             4
 #define CORNER_COORD_COUNT       (2 * CORNER_COUNT)
-#define CORNER_HEATMAP_BYTES     4800
-#define DANGER_MAP_WIDTH         10
-#define DANGER_MAP_HEIGHT        8
-#define DANGER_MAP_BYTES         (DANGER_MAP_WIDTH * DANGER_MAP_HEIGHT)
 
 /* Quantization parameters and operating threshold from this network's
  * manifest.json. The danger head emits uint8 quantized logits, not direct
  * probabilities. */
-#define DANGER_QUANT_EPSILON     0.34079399704933167f
-#define DANGER_QUANT_OFFSET      16.512078149414062f
-#define DANGER_QUANT_BIAS        -0.012773600406944752f
-#define DANGER_PROBABILITY_THRESHOLD 0.07227228581905365f
+#ifndef GAP8_DANGER_QUANT_EPSILON
+#define GAP8_DANGER_QUANT_EPSILON 0.34079399704933167f
+#define GAP8_DANGER_QUANT_OFFSET 16.512078149414062f
+#define GAP8_DANGER_QUANT_BIAS -0.012773600406944752f
+#define GAP8_DANGER_PROBABILITY_THRESHOLD 0.07227228581905365f
+#endif
 #define DANGER_MAX_DARKENING     0.75f
 
-#define NETWORK_L2_WORKSPACE_SIZE 180000
-
 #ifdef TINY_RACER_PARITY_TEST
-#define NETWORK_INPUT_BYTES       (IMAGE_WIDTH * NETWORK_INPUT_HEIGHT)
+#define NETWORK_INPUT_BYTES       (IMAGE_WIDTH * NETWORK_INPUT_HEIGHT * NETWORK_INPUT_CHANNELS)
 #endif
 
 _Static_assert(CAMERA_CROP_WIDTH == IMAGE_WIDTH,
@@ -77,7 +94,7 @@ _Static_assert(CAMERA_CROP_WIDTH == IMAGE_WIDTH,
 _Static_assert(CAMERA_CROP_HEIGHT == IMAGE_HEIGHT,
                "Tiny Racer expects a 160x160 camera crop");
 _Static_assert(GAP8_OUTPUT_BYTES ==
-                   CORNER_HEATMAP_BYTES + DANGER_MAP_BYTES,
+                   CORNER_HEATMAP_BYTES + GATE_MASK_BYTES + DANGER_MAP_BYTES,
                "Unexpected Tiny Racer network output layout");
 
 static uart_t uart;
@@ -95,6 +112,10 @@ static PI_L2 inference_stamped_msg_t latest_inference;
 
 static void *l2_buffer;
 static size_t l2_buffer_size;
+#ifdef GAP8_TEMPORAL_NETWORK
+static PI_L2 uint8_t previous_frame[IMAGE_WIDTH * IMAGE_HEIGHT];
+static PI_FC_L1 bool previous_frame_valid;
+#endif
 
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
 static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
@@ -142,7 +163,7 @@ static void run_parity_test(void) {
            (unsigned long)crc32CalculateBuffer(l2_buffer,
                                                CORNER_HEATMAP_BYTES),
            (unsigned long)crc32CalculateBuffer(
-               (const uint8_t *)l2_buffer + CORNER_HEATMAP_BYTES,
+               (const uint8_t *)l2_buffer + DANGER_MAP_OFFSET,
                DANGER_MAP_BYTES),
            (unsigned long)crc32CalculateBuffer(l2_buffer,
                                                GAP8_OUTPUT_BYTES));
@@ -153,14 +174,24 @@ static void run_parity_test(void) {
 CO_FN_DECLARE(inference_task);
 CO_FN_DECLARE(streamer_rx_task);
 
-/*
- * The network sees the middle 160x120 portion of the 160x160 camera frame.
- * Copy it before inference because the DORY workspace overwrites its input.
- */
+/* Copy/pack input before inference because DORY overwrites its workspace. */
 static void copy_network_input(const frame_t *frame) {
+#ifdef GAP8_TEMPORAL_NETWORK
+    uint8_t *packed = (uint8_t *)l2_buffer;
+    if (!previous_frame_valid) {
+        memcpy(previous_frame, frame->buffer, sizeof(previous_frame));
+        previous_frame_valid = true;
+    }
+    for (size_t pixel = 0; pixel < IMAGE_WIDTH * IMAGE_HEIGHT; ++pixel) {
+        packed[2 * pixel] = previous_frame[pixel];
+        packed[2 * pixel + 1] = frame->buffer[pixel];
+    }
+    memcpy(previous_frame, frame->buffer, sizeof(previous_frame));
+#else
     memcpy(l2_buffer,
            frame->buffer + NETWORK_INPUT_TOP * IMAGE_WIDTH,
            IMAGE_WIDTH * NETWORK_INPUT_HEIGHT);
+#endif
 }
 
 /*
@@ -179,13 +210,13 @@ static void overlay_danger_map(uint8_t *frame, const uint8_t *danger_map) {
         for (int map_x = 0; map_x < DANGER_MAP_WIDTH; ++map_x) {
             const float quantized_danger =
                 (float)danger_map[map_y * DANGER_MAP_WIDTH + map_x];
-            const float logit = quantized_danger * DANGER_QUANT_EPSILON
-                              - DANGER_QUANT_OFFSET + DANGER_QUANT_BIAS;
+            const float logit = quantized_danger * GAP8_DANGER_QUANT_EPSILON
+                              - GAP8_DANGER_QUANT_OFFSET + GAP8_DANGER_QUANT_BIAS;
             const float probability = 1.0f / (1.0f + expf(-logit));
-            const float danger_strength = probability <= DANGER_PROBABILITY_THRESHOLD
+            const float danger_strength = probability <= GAP8_DANGER_PROBABILITY_THRESHOLD
                 ? 0.0f
-                : (probability - DANGER_PROBABILITY_THRESHOLD)
-                    / (1.0f - DANGER_PROBABILITY_THRESHOLD);
+                : (probability - GAP8_DANGER_PROBABILITY_THRESHOLD)
+                    / (1.0f - GAP8_DANGER_PROBABILITY_THRESHOLD);
             const uint16_t shade = (uint16_t)(255.0f * DANGER_MAX_DARKENING
                                                * danger_strength + 0.5f);
             const uint16_t scale = 255u - shade;
@@ -288,7 +319,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
                               corner_confidence);
     (void)gap8_validate_or_recover_gate(corners, corner_confidence);
 
-    danger_map = (const uint8_t *)l2_buffer + CORNER_HEATMAP_BYTES;
+    danger_map = (const uint8_t *)l2_buffer + DANGER_MAP_OFFSET;
     overlay_danger_map(camera_frame->buffer, danger_map);
     for (int corner = 0; corner < CORNER_COUNT; ++corner) {
         draw_corner_marker(camera_frame->buffer,
