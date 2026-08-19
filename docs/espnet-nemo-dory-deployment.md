@@ -67,8 +67,14 @@ configuration.
 
 ## Safety note
 
-The generated firmware is deployment-ready in the software sense: integer
-graphs, checksums, firmware integration, and held-out metrics are versioned.
-Before free flight, verify the live camera exposure and crop, run a tethered
-test, and compare live outputs with the integer ONNX reference. A successful
-build is not by itself flight-safety certification.
+The generated firmware is a deployment *candidate*, not a flight-approved
+model. The first PTQ student preserved collision recall only by producing a
+held-out false-positive rate of 0.653 (AP 0.282), well below the full ESPNet
+teacher. Its package is retained so the NEMO/DORY/GAP8 integration can be
+reproduced and debugged, but it must not be selected for free flight.
+
+The recommended perception checkpoint remains the safety-selected full ESPNet
+teacher. Promote a compact firmware package only after its validation-selected
+threshold passes the held-out obstacle metrics and its NEMO, GVSOC, and live
+camera outputs agree. Then verify camera exposure and crop and run a tethered
+test before free flight. A successful build is not safety certification.
