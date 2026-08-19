@@ -77,6 +77,11 @@ A short NEMO QAT follow-up was also rejected: held-out collision AP improved
 to 0.659, but recall fell to 0.888, danger-map IoU collapsed to 0, and the gate
 mask activated on essentially every negative pixel. It is not packaged.
 
+Generated-C parity is also incomplete. Corner and gate-mask graphs pass GVSOC
+checksums, but the danger branch diverges at its stride-2 depthwise layer and
+the encoder does not terminate in GVSOC. The workflow therefore refuses to
+create a deployment-ready network directory from this student.
+
 The recommended perception checkpoint remains the safety-selected full ESPNet
 teacher. Promote a compact firmware package only after its validation-selected
 threshold passes the held-out obstacle metrics and its NEMO, GVSOC, and live
