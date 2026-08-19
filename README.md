@@ -115,6 +115,10 @@ linked GAP8 build. The AI-deck must also run this repository's NINA CPX bridge;
 the Bitcraze JPEG `wifi-img-streamer` protocol is not compatible with this
 client.
 
+The two-consecutive-frame ESPNet release has its complete PyTorch-to-NEMO-to-
+DORY workflow, runtime tensor contract, validation gates, and build/flash
+commands in [the deployment guide](docs/espnet-nemo-dory-deployment.md).
+
 With the AI-deck connected in AP mode, the viewer receives the crop and runs
 the exact three-component integer ONNX release from
 `gap8_stdc_release_shared_real_v1` on the laptop. It renders the ordered
