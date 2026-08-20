@@ -1,0 +1,1272 @@
+{
+  "format": "nanocockpit-espnet-dronet-gate-v1",
+  "name": "gap8-espnet-dronet-gate-v1",
+  "input": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [
+      160,
+      160,
+      2
+    ],
+    "channel_order": [
+      "previous",
+      "current"
+    ]
+  },
+  "outputs": {
+    "corner_heatmaps": {
+      "shape": [
+        20,
+        20,
+        4
+      ],
+      "offset": 0,
+      "bytes": 1600
+    },
+    "gate_mask": {
+      "shape": [
+        20,
+        20,
+        1
+      ],
+      "offset": 1600,
+      "bytes": 400
+    },
+    "presence": {
+      "shape": [
+        1
+      ],
+      "offset": 2000,
+      "bytes": 1
+    },
+    "navigation": {
+      "shape": [
+        2
+      ],
+      "order": [
+        "yaw",
+        "collision_logit"
+      ],
+      "offset": 2001,
+      "bytes": 2
+    }
+  },
+  "graphs": {
+    "encoder": {
+      "graph": "encoder",
+      "onnx": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/deployment_conditioned_final/integer/encoder/encoder_int.onnx",
+      "operators": [
+        "Add",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Floor",
+        "Mul"
+      ],
+      "output_epsilon": 0.14906534552574158,
+      "output_offset": [
+        0.0
+      ],
+      "parity_feature_mae": 0.6262871026992798,
+      "parity_feature_max": 11.305381774902344,
+      "integer_output_shape": [
+        1,
+        64,
+        20,
+        20
+      ],
+      "integer_nonzero": 22971,
+      "integer_layers": 22,
+      "residual_adds_configured": 27,
+      "residual_requantization_factor": 1,
+      "qat_checkpoint": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/qat_conditioned_final/encoder_qat.pt",
+      "parity_images": 512,
+      "weight_quantization": [
+        {
+          "name": "stem.0.0",
+          "minimum_before": -121.0,
+          "maximum_before": 135.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 28,
+          "minimum_after": -121,
+          "maximum_after": 127
+        },
+        {
+          "name": "stem.1.depthwise.0",
+          "minimum_before": -118.99999237060547,
+          "maximum_before": 130.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 19,
+          "minimum_after": -119,
+          "maximum_after": 127
+        },
+        {
+          "name": "stem.1.pointwise.0",
+          "minimum_before": -121.0,
+          "maximum_before": 128.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 38,
+          "minimum_after": -121,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage1.0.depthwise.0",
+          "minimum_before": -151.0,
+          "maximum_before": 103.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 22,
+          "minimum_after": -128,
+          "maximum_after": 103
+        },
+        {
+          "name": "stage1.0.pointwise.0",
+          "minimum_before": -136.0,
+          "maximum_before": 118.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 49,
+          "minimum_after": -128,
+          "maximum_after": 118
+        },
+        {
+          "name": "stage1.1.block.depthwise.0",
+          "minimum_before": -100.0,
+          "maximum_before": 154.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -100,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage1.1.block.pointwise.0",
+          "minimum_before": -116.0,
+          "maximum_before": 134.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 173,
+          "minimum_after": -116,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage1.2.block.depthwise.0",
+          "minimum_before": -93.0,
+          "maximum_before": 153.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -93,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage1.2.block.pointwise.0",
+          "minimum_before": -113.0,
+          "maximum_before": 134.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 127,
+          "minimum_after": -113,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage2.0.depthwise.0",
+          "minimum_before": -130.0,
+          "maximum_before": 122.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 23,
+          "minimum_after": -128,
+          "maximum_after": 122
+        },
+        {
+          "name": "stage2.0.pointwise.0",
+          "minimum_before": -123.0,
+          "maximum_before": 130.99998474121094,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 191,
+          "minimum_after": -123,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage2.1.block.depthwise.0",
+          "minimum_before": -109.0,
+          "maximum_before": 117.0,
+          "overflow_values_clamped": 0,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -109,
+          "maximum_after": 117
+        },
+        {
+          "name": "stage2.1.block.pointwise.0",
+          "minimum_before": -133.0,
+          "maximum_before": 113.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 768,
+          "minimum_after": -128,
+          "maximum_after": 113
+        },
+        {
+          "name": "stage2.2.block.depthwise.0",
+          "minimum_before": -107.0,
+          "maximum_before": 133.99998474121094,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 3,
+          "minimum_after": -107,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage2.2.block.pointwise.0",
+          "minimum_before": -112.0,
+          "maximum_before": 137.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -112,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage2.3.block.depthwise.0",
+          "minimum_before": -108.0,
+          "maximum_before": 133.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 15,
+          "minimum_after": -108,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage2.3.block.pointwise.0",
+          "minimum_before": -115.99999237060547,
+          "maximum_before": 137.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 415,
+          "minimum_after": -116,
+          "maximum_after": 127
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "stem.0.0.weight",
+          "minimum": -121,
+          "maximum": 127,
+          "values": 288
+        },
+        {
+          "name": "stem.1.depthwise.0.weight",
+          "minimum": -119,
+          "maximum": 127,
+          "values": 144
+        },
+        {
+          "name": "stem.1.pointwise.0.weight",
+          "minimum": -121,
+          "maximum": 127,
+          "values": 256
+        },
+        {
+          "name": "stage1.0.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 103,
+          "values": 144
+        },
+        {
+          "name": "stage1.0.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 118,
+          "values": 512
+        },
+        {
+          "name": "stage1.1.block.depthwise.0.weight",
+          "minimum": -100,
+          "maximum": 127,
+          "values": 288
+        },
+        {
+          "name": "stage1.1.block.pointwise.0.weight",
+          "minimum": -116,
+          "maximum": 127,
+          "values": 1024
+        },
+        {
+          "name": "stage1.2.block.depthwise.0.weight",
+          "minimum": -93,
+          "maximum": 127,
+          "values": 288
+        },
+        {
+          "name": "stage1.2.block.pointwise.0.weight",
+          "minimum": -113,
+          "maximum": 127,
+          "values": 1024
+        },
+        {
+          "name": "stage2.0.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 122,
+          "values": 288
+        },
+        {
+          "name": "stage2.0.pointwise.0.weight",
+          "minimum": -123,
+          "maximum": 127,
+          "values": 2048
+        },
+        {
+          "name": "stage2.1.block.depthwise.0.weight",
+          "minimum": -109,
+          "maximum": 117,
+          "values": 576
+        },
+        {
+          "name": "stage2.1.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 113,
+          "values": 4096
+        },
+        {
+          "name": "stage2.2.block.depthwise.0.weight",
+          "minimum": -107,
+          "maximum": 127,
+          "values": 576
+        },
+        {
+          "name": "stage2.2.block.pointwise.0.weight",
+          "minimum": -112,
+          "maximum": 127,
+          "values": 4096
+        },
+        {
+          "name": "stage2.3.block.depthwise.0.weight",
+          "minimum": -108,
+          "maximum": 127,
+          "values": 576
+        },
+        {
+          "name": "stage2.3.block.pointwise.0.weight",
+          "minimum": -116,
+          "maximum": 127,
+          "values": 4096
+        }
+      ]
+    },
+    "corner_head": {
+      "graph": "corner_head",
+      "onnx": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/deployment_conditioned_final/integer/corner_head/corner_head_int.onnx",
+      "operators": [
+        "Add",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Mul"
+      ],
+      "input_epsilon": 0.14906534552574158,
+      "output_epsilon": 0.15550558269023895,
+      "output_offset": [
+        29.644200189208984,
+        28.754172189331054,
+        35.61135946044922,
+        25.24959836730957
+      ],
+      "learned_bias": [
+        -0.12345705926418304,
+        -0.1256028264760971,
+        -0.051303938031196594,
+        -0.40146374702453613
+      ],
+      "parity_logit_mae": 1.2806443468570927,
+      "parity_logit_max": 13.193417785859111,
+      "parity_probability_mae": 0.0037382892273600844,
+      "parity_probability_max": 0.7039499249253989,
+      "parity_corner_peak_mean_heatmap_px": 4.122777418005898,
+      "parity_corner_peak_p95_heatmap_px": 15.033296378372908,
+      "integer_output_shape": [
+        1,
+        4,
+        20,
+        20
+      ],
+      "integer_nonzero": 1591,
+      "integer_layers": 4,
+      "residual_adds_configured": 4,
+      "residual_requantization_factor": 1,
+      "qat_checkpoint": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/qat_conditioned_final/corner_head_qat.pt",
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 512,
+      "weight_quantization": [
+        {
+          "name": "adapter.0",
+          "minimum_before": -114.0,
+          "maximum_before": 140.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -114,
+          "maximum_after": 127
+        },
+        {
+          "name": "head_features.depthwise.0",
+          "minimum_before": -127.0,
+          "maximum_before": 126.0,
+          "overflow_values_clamped": 0,
+          "noninteger_values_rounded": 44,
+          "minimum_after": -127,
+          "maximum_after": 126
+        },
+        {
+          "name": "head_features.pointwise.0",
+          "minimum_before": -133.0,
+          "maximum_before": 119.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 47,
+          "minimum_after": -128,
+          "maximum_after": 119
+        },
+        {
+          "name": "output_proj.0",
+          "minimum_before": -157.0,
+          "maximum_before": 97.0,
+          "overflow_values_clamped": 6,
+          "noninteger_values_rounded": 6,
+          "minimum_after": -128,
+          "maximum_after": 97
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "adapter.0.weight",
+          "minimum": -114,
+          "maximum": 127,
+          "values": 2048
+        },
+        {
+          "name": "head_features.depthwise.0.weight",
+          "minimum": -127,
+          "maximum": 126,
+          "values": 288
+        },
+        {
+          "name": "head_features.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 119,
+          "values": 512
+        },
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -128,
+          "maximum": 97,
+          "values": 64
+        }
+      ]
+    },
+    "gate_head": {
+      "graph": "gate_head",
+      "onnx": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/deployment_conditioned_final/integer/gate_head/gate_head_int.onnx",
+      "operators": [
+        "Add",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Mul"
+      ],
+      "input_epsilon": 0.14906534552574158,
+      "output_epsilon": 2.960508346557617,
+      "output_offset": [
+        703.5765770507812
+      ],
+      "learned_bias": [
+        -0.2522831857204437
+      ],
+      "parity_logit_mae": 25.29743637665576,
+      "parity_logit_max": 386.5443868173122,
+      "parity_probability_mae": 0.0031649778736078937,
+      "parity_probability_max": 0.9999957246766153,
+      "parity_corner_peak_mean_heatmap_px": null,
+      "parity_corner_peak_p95_heatmap_px": null,
+      "integer_output_shape": [
+        1,
+        1,
+        20,
+        20
+      ],
+      "integer_nonzero": 392,
+      "integer_layers": 4,
+      "residual_adds_configured": 4,
+      "residual_requantization_factor": 1,
+      "qat_checkpoint": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/qat_conditioned_final/gate_head_qat.pt",
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 512,
+      "weight_quantization": [
+        {
+          "name": "adapter.0",
+          "minimum_before": -123.0,
+          "maximum_before": 128.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -123,
+          "maximum_after": 127
+        },
+        {
+          "name": "head_features.depthwise.0",
+          "minimum_before": -134.0,
+          "maximum_before": 120.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 32,
+          "minimum_after": -128,
+          "maximum_after": 120
+        },
+        {
+          "name": "head_features.pointwise.0",
+          "minimum_before": -140.0,
+          "maximum_before": 101.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 86,
+          "minimum_after": -128,
+          "maximum_after": 101
+        },
+        {
+          "name": "output_proj.0",
+          "minimum_before": -148.0,
+          "maximum_before": 99.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -128,
+          "maximum_after": 99
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "adapter.0.weight",
+          "minimum": -123,
+          "maximum": 127,
+          "values": 2048
+        },
+        {
+          "name": "head_features.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 120,
+          "values": 288
+        },
+        {
+          "name": "head_features.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 101,
+          "values": 512
+        },
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -128,
+          "maximum": 99,
+          "values": 16
+        }
+      ]
+    },
+    "presence_head": {
+      "graph": "presence_head",
+      "onnx": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/deployment_conditioned_final/integer/presence_head/presence_head_int.onnx",
+      "operators": [
+        "Add",
+        "AveragePool",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Floor",
+        "Mul",
+        "Pad"
+      ],
+      "input_epsilon": 0.14906534552574158,
+      "output_epsilon": 0.1207355260848999,
+      "output_offset": [
+        5.558176858520508
+      ],
+      "learned_bias": [
+        0.010294714942574501
+      ],
+      "parity_logit_mae": 0.3013776219022843,
+      "parity_logit_max": 1.5858477911144497,
+      "parity_probability_mae": 0.0660784355746023,
+      "parity_probability_max": 0.2106015056291708,
+      "parity_corner_peak_mean_heatmap_px": null,
+      "parity_corner_peak_p95_heatmap_px": null,
+      "integer_output_shape": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "integer_nonzero": 1,
+      "integer_layers": 2,
+      "residual_adds_configured": 1,
+      "residual_requantization_factor": 1,
+      "qat_checkpoint": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/qat_conditioned_final/presence_head_qat.pt",
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 512,
+      "weight_quantization": [
+        {
+          "name": "output_proj.0",
+          "minimum_before": -81.0,
+          "maximum_before": 175.00001525878906,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 8,
+          "minimum_after": -81,
+          "maximum_after": 127
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -81,
+          "maximum": 127,
+          "values": 64
+        }
+      ]
+    },
+    "navigation_head": {
+      "graph": "navigation_head",
+      "onnx": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/deployment_conditioned_final/integer/navigation_head/navigation_head_int.onnx",
+      "operators": [
+        "Add",
+        "AveragePool",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Floor",
+        "Mul",
+        "Pad"
+      ],
+      "input_epsilon": 0.14906534552574158,
+      "output_epsilon": 0.060859307646751404,
+      "output_offset": [
+        1.2427801919937134,
+        7.57079730758667
+      ],
+      "learned_bias": [
+        0.0,
+        0.0
+      ],
+      "parity_logit_mae": 1.4708184688614134,
+      "parity_logit_max": 6.56325016746521,
+      "parity_probability_mae": 0.15333743895330104,
+      "parity_probability_max": 0.6264587286157202,
+      "parity_corner_peak_mean_heatmap_px": null,
+      "parity_corner_peak_p95_heatmap_px": null,
+      "integer_output_shape": [
+        1,
+        2,
+        1,
+        1
+      ],
+      "integer_nonzero": 2,
+      "integer_layers": 25,
+      "residual_adds_configured": 31,
+      "residual_requantization_factor": 1,
+      "qat_checkpoint": "/home/cchen/isaacsim-workspace/workspace/espnet_dronet_middle_gate_selected_seed2027/qat_conditioned_final/navigation_head_qat.pt",
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 512,
+      "weight_quantization": [
+        {
+          "name": "stage3.0.depthwise.0",
+          "minimum_before": -128.0,
+          "maximum_before": 126.0,
+          "overflow_values_clamped": 0,
+          "noninteger_values_rounded": 1,
+          "minimum_after": -128,
+          "maximum_after": 126
+        },
+        {
+          "name": "stage3.0.pointwise.0",
+          "minimum_before": -131.0,
+          "maximum_before": 119.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 82,
+          "minimum_after": -128,
+          "maximum_after": 119
+        },
+        {
+          "name": "stage3.1.block.depthwise.0",
+          "minimum_before": -112.0,
+          "maximum_before": 142.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 50,
+          "minimum_after": -112,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage3.1.block.pointwise.0",
+          "minimum_before": -131.0,
+          "maximum_before": 122.99999237060547,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 1363,
+          "minimum_after": -128,
+          "maximum_after": 123
+        },
+        {
+          "name": "stage3.2.block.depthwise.0",
+          "minimum_before": -135.0,
+          "maximum_before": 118.00000762939453,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 68,
+          "minimum_after": -128,
+          "maximum_after": 118
+        },
+        {
+          "name": "stage3.2.block.pointwise.0",
+          "minimum_before": -130.0,
+          "maximum_before": 126.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 1530,
+          "minimum_after": -128,
+          "maximum_after": 126
+        },
+        {
+          "name": "stage3.3.block.depthwise.0",
+          "minimum_before": -134.0,
+          "maximum_before": 118.0,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 21,
+          "minimum_after": -128,
+          "maximum_after": 118
+        },
+        {
+          "name": "stage3.3.block.pointwise.0",
+          "minimum_before": -150.0,
+          "maximum_before": 105.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 588,
+          "minimum_after": -128,
+          "maximum_after": 105
+        },
+        {
+          "name": "stage3.4.block.depthwise.0",
+          "minimum_before": -124.0,
+          "maximum_before": 132.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 0,
+          "minimum_after": -124,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage3.4.block.pointwise.0",
+          "minimum_before": -131.0,
+          "maximum_before": 125.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 604,
+          "minimum_after": -128,
+          "maximum_after": 125
+        },
+        {
+          "name": "stage3.5.block.depthwise.0",
+          "minimum_before": -132.0,
+          "maximum_before": 124.0,
+          "overflow_values_clamped": 2,
+          "noninteger_values_rounded": 65,
+          "minimum_after": -128,
+          "maximum_after": 124
+        },
+        {
+          "name": "stage3.5.block.pointwise.0",
+          "minimum_before": -131.0,
+          "maximum_before": 120.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 328,
+          "minimum_after": -128,
+          "maximum_after": 120
+        },
+        {
+          "name": "stage3.6.block.depthwise.0",
+          "minimum_before": -127.0,
+          "maximum_before": 128.0,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 67,
+          "minimum_after": -127,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage3.6.block.pointwise.0",
+          "minimum_before": -112.00000762939453,
+          "maximum_before": 142.0,
+          "overflow_values_clamped": 7,
+          "noninteger_values_rounded": 846,
+          "minimum_after": -112,
+          "maximum_after": 127
+        },
+        {
+          "name": "stage3.7.block.depthwise.0",
+          "minimum_before": -140.0,
+          "maximum_before": 111.99999237060547,
+          "overflow_values_clamped": 3,
+          "noninteger_values_rounded": 118,
+          "minimum_after": -128,
+          "maximum_after": 112
+        },
+        {
+          "name": "stage3.7.block.pointwise.0",
+          "minimum_before": -130.0,
+          "maximum_before": 120.00000762939453,
+          "overflow_values_clamped": 1,
+          "noninteger_values_rounded": 821,
+          "minimum_after": -128,
+          "maximum_after": 120
+        },
+        {
+          "name": "output_proj.0",
+          "minimum_before": -124.0,
+          "maximum_before": 102.0,
+          "overflow_values_clamped": 0,
+          "noninteger_values_rounded": 14,
+          "minimum_after": -124,
+          "maximum_after": 102
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "stage3.0.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 126,
+          "values": 576
+        },
+        {
+          "name": "stage3.0.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 119,
+          "values": 6144
+        },
+        {
+          "name": "stage3.1.block.depthwise.0.weight",
+          "minimum": -112,
+          "maximum": 127,
+          "values": 864
+        },
+        {
+          "name": "stage3.1.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 123,
+          "values": 9216
+        },
+        {
+          "name": "stage3.2.block.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 118,
+          "values": 864
+        },
+        {
+          "name": "stage3.2.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 126,
+          "values": 9216
+        },
+        {
+          "name": "stage3.3.block.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 118,
+          "values": 864
+        },
+        {
+          "name": "stage3.3.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 105,
+          "values": 9216
+        },
+        {
+          "name": "stage3.4.block.depthwise.0.weight",
+          "minimum": -124,
+          "maximum": 127,
+          "values": 864
+        },
+        {
+          "name": "stage3.4.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 125,
+          "values": 9216
+        },
+        {
+          "name": "stage3.5.block.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 124,
+          "values": 864
+        },
+        {
+          "name": "stage3.5.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 120,
+          "values": 9216
+        },
+        {
+          "name": "stage3.6.block.depthwise.0.weight",
+          "minimum": -127,
+          "maximum": 127,
+          "values": 864
+        },
+        {
+          "name": "stage3.6.block.pointwise.0.weight",
+          "minimum": -112,
+          "maximum": 127,
+          "values": 9216
+        },
+        {
+          "name": "stage3.7.block.depthwise.0.weight",
+          "minimum": -128,
+          "maximum": 112,
+          "values": 864
+        },
+        {
+          "name": "stage3.7.block.pointwise.0.weight",
+          "minimum": -128,
+          "maximum": 120,
+          "values": 9216
+        },
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -124,
+          "maximum": 102,
+          "values": 192
+        }
+      ]
+    }
+  },
+  "deployment_logit_scale": {
+    "corner_head": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "gate_head": [
+      1.0
+    ],
+    "presence_head": [
+      4.0
+    ],
+    "navigation_head": [
+      1.0,
+      8.0
+    ]
+  },
+  "gate_confidence_fusion": {
+    "mean": [
+      0.7985369851697791,
+      0.26617044903287485,
+      0.6138960815024689
+    ],
+    "scale": [
+      0.28441201539745553,
+      0.38346236824033086,
+      0.14942132396195934
+    ],
+    "weight": [
+      1.2141424246350632,
+      0.23188614391540915,
+      1.3052519850668753
+    ],
+    "bias": 1.1140172563144006,
+    "threshold": 0.6174671283211735
+  },
+  "navigation_collision_threshold": 0.2993573844432831,
+  "navigation_output_calibration": {
+    "format": "espnet-integer-navigation-calibration-v1",
+    "selected_on": "official validation split",
+    "yaw_scale": 0.07248172054872366,
+    "yaw_bias": -0.0005410605551218074,
+    "collision_logit_scale": 0.130829117643592,
+    "collision_logit_bias": -0.4458621310020539,
+    "validation": {
+      "samples": 6507,
+      "yaw_rmse": 0.1262173978065843,
+      "collision_bce": 0.3849394316456125,
+      "collision_auroc": 0.8958691633890592,
+      "collision_ap": 0.8143270834623565,
+      "threshold_metrics": {
+        "threshold": 0.49366175518049926,
+        "accuracy": 0.8498540033809744,
+        "precision": 0.7995217218015146,
+        "recall": 0.8088709677419355,
+        "f1": 0.8041691721787932,
+        "tp": 2006,
+        "tn": 3524,
+        "fp": 503,
+        "fn": 474
+      }
+    },
+    "test": {
+      "samples": 1954,
+      "yaw_rmse": 0.3774808601408204,
+      "collision_bce": 0.6009021971104869,
+      "collision_auroc": 0.7764026239884976,
+      "collision_ap": 0.6599841543519558,
+      "threshold_metrics": {
+        "threshold": 0.49366175518049926,
+        "accuracy": 0.7323439099283521,
+        "precision": 0.6918335901386748,
+        "recall": 0.5816062176165803,
+        "f1": 0.6319493314567206,
+        "tp": 449,
+        "tn": 982,
+        "fp": 200,
+        "fn": 323
+      }
+    },
+    "cnn_mac_overhead": 0,
+    "scalar_postprocess_multiply_adds": 2
+  },
+  "float_test": {
+    "navigation": {
+      "samples": 1954,
+      "yaw_mse": 0.12255488172805959,
+      "yaw_rmse": 0.35007839368927013,
+      "collision_bce": 0.613364489564144,
+      "collision_brier": 0.15816887238761015,
+      "collision_ece_10bin": 0.13538577807986765,
+      "collision_auroc": 0.8951692266554447,
+      "collision_ap": 0.8479284091729625,
+      "collision_positive_count": 772,
+      "at_0_5": {
+        "threshold": 0.5,
+        "accuracy": 0.7998976458546572,
+        "balanced_accuracy": 0.7748437267124308,
+        "precision": 0.8019017432646592,
+        "recall": 0.655440414507772,
+        "specificity": 0.8942470389170897,
+        "f1": 0.7213114754098361,
+        "tp": 506,
+        "tn": 1057,
+        "fp": 125,
+        "fn": 266
+      },
+      "seconds": 0.4566209320910275,
+      "at_validation_f1_threshold": {
+        "threshold": 0.2993573844432831,
+        "accuracy": 0.8065506653019447,
+        "balanced_accuracy": 0.7915757081612793,
+        "precision": 0.7743732590529248,
+        "recall": 0.7202072538860104,
+        "specificity": 0.8629441624365483,
+        "f1": 0.7463087248322148,
+        "tp": 556,
+        "tn": 1020,
+        "fp": 162,
+        "fn": 216
+      }
+    },
+    "gate": {
+      "gate_iou": 0.8073607476082746,
+      "corner_mean_px": 4.2197957038879395,
+      "corner_p95_px": 7.923580169677734,
+      "real_corner_mean_px": 23.318193435668945,
+      "real_corner_p95_px": 81.72030639648438,
+      "negative_mask_pixel_rate": 5.375e-05,
+      "structured_confidence": {
+        "auroc": 0.926166696412636,
+        "average_precision": 0.9655564002346315,
+        "threshold": 0.6174671283211735,
+        "accuracy": 0.8528420318493549,
+        "balanced_accuracy": 0.872855345350705,
+        "precision": 0.9610886668084202,
+        "recall": 0.80671069070141,
+        "specificity": 0.939,
+        "f1": 0.8771589365418203,
+        "tp": 4520,
+        "tn": 2817,
+        "fp": 183,
+        "fn": 1083
+      }
+    }
+  },
+  "integer_test": {
+    "format": "espnet-dronet-middle-gate-release-evaluation-v1",
+    "input_resolution": [
+      160,
+      160
+    ],
+    "navigation_threshold_selected_on": "official validation split",
+    "navigation_validation": {
+      "samples": 6507,
+      "yaw_rmse": 0.1262173978065843,
+      "collision_bce": 0.3849394316456125,
+      "collision_auroc": 0.8958691633890592,
+      "collision_ap": 0.8143270834623565,
+      "threshold_metrics": {
+        "threshold": 0.49366175518049926,
+        "accuracy": 0.8498540033809744,
+        "precision": 0.7995217218015146,
+        "recall": 0.8088709677419355,
+        "f1": 0.8041691721787932,
+        "tp": 2006,
+        "tn": 3524,
+        "fp": 503,
+        "fn": 474
+      }
+    },
+    "navigation_test": {
+      "samples": 1954,
+      "yaw_rmse": 0.3774808601408204,
+      "collision_bce": 0.6009021971104869,
+      "collision_auroc": 0.7764026239884976,
+      "collision_ap": 0.6599841543519558,
+      "threshold_metrics": {
+        "threshold": 0.49366175518049926,
+        "accuracy": 0.7323439099283521,
+        "precision": 0.6918335901386748,
+        "recall": 0.5816062176165803,
+        "f1": 0.6319493314567206,
+        "tp": 449,
+        "tn": 982,
+        "fp": 200,
+        "fn": 323
+      }
+    },
+    "gate_test": {
+      "synthetic_examples": 2000,
+      "negative_examples": 3000,
+      "real_examples": 3603,
+      "gate_iou": 0.6084342911071674,
+      "corner_mean_px": 6.556253028458691,
+      "corner_p95_px": 51.080646324157755,
+      "real_corner_mean_px": 24.17022870837879,
+      "real_corner_p95_px": 78.96085281372048,
+      "negative_mask_pixel_rate": 0.00284,
+      "structured_confidence": {
+        "auroc": 0.8925840323636147,
+        "ap": 0.9423720954936916,
+        "threshold": 0.6174671283211735,
+        "accuracy": 0.8371498314541439,
+        "precision": 0.8581657006478008,
+        "recall": 0.8984472603962164,
+        "f1": 0.8778446246403347,
+        "tp": 5034,
+        "tn": 2168,
+        "fp": 832,
+        "fn": 569
+      }
+    },
+    "navigation_output_calibration": {
+      "format": "espnet-integer-navigation-calibration-v1",
+      "selected_on": "official validation split",
+      "yaw_scale": 0.07248172054872366,
+      "yaw_bias": -0.0005410605551218074,
+      "collision_logit_scale": 0.130829117643592,
+      "collision_logit_bias": -0.4458621310020539,
+      "validation": {
+        "samples": 6507,
+        "yaw_rmse": 0.1262173978065843,
+        "collision_bce": 0.3849394316456125,
+        "collision_auroc": 0.8958691633890592,
+        "collision_ap": 0.8143270834623565,
+        "threshold_metrics": {
+          "threshold": 0.49366175518049926,
+          "accuracy": 0.8498540033809744,
+          "precision": 0.7995217218015146,
+          "recall": 0.8088709677419355,
+          "f1": 0.8041691721787932,
+          "tp": 2006,
+          "tn": 3524,
+          "fp": 503,
+          "fn": 474
+        }
+      },
+      "test": {
+        "samples": 1954,
+        "yaw_rmse": 0.3774808601408204,
+        "collision_bce": 0.6009021971104869,
+        "collision_auroc": 0.7764026239884976,
+        "collision_ap": 0.6599841543519558,
+        "threshold_metrics": {
+          "threshold": 0.49366175518049926,
+          "accuracy": 0.7323439099283521,
+          "precision": 0.6918335901386748,
+          "recall": 0.5816062176165803,
+          "f1": 0.6319493314567206,
+          "tp": 449,
+          "tn": 982,
+          "fp": 200,
+          "fn": 323
+        }
+      },
+      "cnn_mac_overhead": 0,
+      "scalar_postprocess_multiply_adds": 2
+    }
+  },
+  "architecture_selection": {
+    "format": "tinympc-perception-architecture-selection-v1",
+    "selected": "espnet_two_frame_middle_heatmap_mask",
+    "selection_policy": "validation-only architecture and seed selection, then MAC-aware held-out comparison",
+    "selected_seed": 2027,
+    "selected_epoch": 30,
+    "gate_tap": "middle_stage2",
+    "corner_representation": "four heatmaps",
+    "gate_representation": "binary mask",
+    "confidence": "logistic fusion of presence, mask peak, and corner peak quality",
+    "models": {
+      "espnet_selected_float": {
+        "parameters": 108374,
+        "deployment_macs_160x160": 26275200,
+        "navigation_test": {
+          "yaw_rmse": 0.35007839368927013,
+          "collision_bce": 0.613364489564144,
+          "collision_auroc": 0.8951692266554447,
+          "collision_ap": 0.8479284091729625
+        },
+        "gate_test": {
+          "gate_iou": 0.8073607476082746,
+          "corner_mean_px": 4.2197957038879395,
+          "real_corner_mean_px": 23.318193435668945,
+          "structured_confidence_auroc": 0.926166696412636
+        }
+      },
+      "espnet_selected_integer_exact": {
+        "parameters": 108374,
+        "deployment_macs_160x160": 26275200,
+        "gvsoc_exact_graphs": 5,
+        "navigation_output_postprocess_multiply_adds": 2,
+        "navigation_test": {
+          "yaw_rmse": 0.3774808601408204,
+          "collision_bce": 0.6009021971104869,
+          "collision_auroc": 0.7764026239884976,
+          "collision_ap": 0.6599841543519558
+        },
+        "gate_test": {
+          "gate_iou": 0.6084342911071674,
+          "corner_mean_px": 6.556253028458691,
+          "real_corner_mean_px": 24.17022870837879,
+          "structured_confidence_auroc": 0.8925840323636147
+        }
+      },
+      "dronetv3_joint_gate_control": {
+        "parameters": 58934,
+        "deployment_macs_160x160": 21102992,
+        "navigation_test": {
+          "yaw_rmse": 0.3657650124454973,
+          "collision_bce": 0.589995326624922,
+          "collision_auroc": 0.8821791466119601,
+          "collision_ap": 0.8449294554001414
+        },
+        "gate_test": {
+          "gate_iou": 0.45912757997607717,
+          "corner_mean_px": 11.791938781738281,
+          "real_corner_mean_px": 24.081926345825195,
+          "presence_auroc": 0.8699662777798051
+        }
+      }
+    },
+    "compute_tradeoff": {
+      "extra_macs": 5172208,
+      "extra_macs_fraction": 0.2451002227219582,
+      "gate_iou_absolute_gain": 0.3482331676321974,
+      "gate_iou_relative_gain": 0.7585891961793764,
+      "corner_error_reduction_fraction": 0.6421474108758926,
+      "exact_integer_gate_iou_relative_gain_vs_dronet_float_control": 0.3252021854487166,
+      "exact_integer_corner_error_reduction_vs_dronet_float_control": 0.4440054756026995,
+      "conclusion": "Select ESPNet for the gate-centric multitask release: its exact integer deployment costs 24.5% more MACs than the joint DroNet control while retaining a 32.5% gate-IoU gain and 44.4% lower synthetic corner error. Calibrated yaw RMSE and collision BCE remain close, but integer collision ranking is weaker and is recorded as a deployment limitation."
+    },
+    "three_seed_espnet_mean": {
+      "yaw_rmse": 0.36824925154663984,
+      "collision_bce": 0.5961728534451202,
+      "collision_auroc": 0.8761506798874306,
+      "collision_ap": 0.8267098490529716,
+      "gate_iou": 0.8017162319585667,
+      "corner_mean_px": 4.29819901784261,
+      "real_corner_mean_px": 21.823816935221355,
+      "structured_confidence_auroc": 0.9287644317528309
+    }
+  }
+}

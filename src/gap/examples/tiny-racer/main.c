@@ -51,6 +51,15 @@
 #define NETWORK_INPUT_HEIGHT     160
 #define NETWORK_INPUT_TOP        0
 #define NETWORK_INPUT_CHANNELS   2
+#ifdef GAP8_ESPNET_DRONET_GATE
+#define CORNER_HEATMAP_BYTES     1600
+#define GATE_MASK_BYTES          400
+#define DANGER_MAP_WIDTH         1
+#define DANGER_MAP_HEIGHT        1
+#define DANGER_MAP_BYTES         3
+#define DANGER_MAP_OFFSET        2000
+#define NETWORK_L2_WORKSPACE_SIZE 300000
+#else
 #define CORNER_HEATMAP_BYTES     6400
 #define GATE_MASK_BYTES          1600
 #define DANGER_MAP_WIDTH         10
@@ -58,6 +67,7 @@
 #define DANGER_MAP_BYTES         100
 #define DANGER_MAP_OFFSET        (CORNER_HEATMAP_BYTES + GATE_MASK_BYTES)
 #define NETWORK_L2_WORKSPACE_SIZE 220000
+#endif
 #else
 #define NETWORK_INPUT_HEIGHT     120
 #define NETWORK_INPUT_TOP        20
@@ -320,7 +330,11 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     (void)gap8_validate_or_recover_gate(corners, corner_confidence);
 
     danger_map = (const uint8_t *)l2_buffer + DANGER_MAP_OFFSET;
+#ifndef GAP8_ESPNET_DRONET_GATE
     overlay_danger_map(camera_frame->buffer, danger_map);
+#else
+    (void)danger_map;
+#endif
     for (int corner = 0; corner < CORNER_COUNT; ++corner) {
         draw_corner_marker(camera_frame->buffer,
                            corners[2 * corner],
@@ -390,6 +404,7 @@ CO_FN_END()
 static void main_task(void) {
     soc_init();
 
+#ifndef TINY_RACER_PARITY_TEST
     uart_init(&uart);
     uart_protocol_init(&uart_protocol, &uart, uart_callback);
 
@@ -398,6 +413,7 @@ static void main_task(void) {
     cpx_init(&cpx);
     streamer_init(&streamer, &camera, &cpx);
     streamer_alloc_frames(&streamer, &camera);
+#endif
 
     cluster_init(&cluster);
     mem_init();
@@ -414,8 +430,7 @@ static void main_task(void) {
 
 #ifdef TINY_RACER_PARITY_TEST
     run_parity_test();
-#endif
-
+#else
     trace_init();
 
     VERBOSE_PRINT("\n\t *** Initialization done ***\n\n");
@@ -429,6 +444,7 @@ static void main_task(void) {
         camera_watchdog_poll(&camera);
         pi_yield();
     }
+#endif
 }
 
 int main(void) {
