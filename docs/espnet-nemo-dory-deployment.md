@@ -56,9 +56,9 @@ source /home/cchen/gap_sdk_dory/configs/ai_deck.sh
 set -u
 
 cd src/gap/examples/tiny-racer
-make clean NETWORK_NAME=gap8-espnet-dory-student-v1
-make build NETWORK_NAME=gap8-espnet-dory-student-v1
-make all NETWORK_NAME=gap8-espnet-dory-student-v1
+make clean NETWORK_NAME=gap8-espnet-dory-student-v2-hybrid-qat
+make build NETWORK_NAME=gap8-espnet-dory-student-v2-hybrid-qat
+make all NETWORK_NAME=gap8-espnet-dory-student-v2-hybrid-qat
 ```
 
 `make build` is the non-destructive compile/link check. `make all` also creates
@@ -67,25 +67,27 @@ configuration.
 
 ## Safety note
 
-The generated firmware is a deployment *candidate*, not a flight-approved
-model. The first PTQ student preserved collision recall only by producing a
-held-out false-positive rate of 0.653 (AP 0.282), well below the full ESPNet
-teacher. Its package is retained so the NEMO/DORY/GAP8 integration can be
-reproduced and debugged, but it must not be selected for free flight.
+The packaged network is `gap8-espnet-dory-student-v2-hybrid-qat`. It uses the
+QAT encoder and danger branch together with the better-calibrated PTQ corner
+and gate-mask branches. All 52 generated DORY layers passed their per-layer
+NEMO-to-GVSOC checksums, and the final NanoCockpit firmware compiled and
+linked successfully.
+
+On the held-out integer test set, the packaged network obtained obstacle
+AUROC 0.907, AP 0.460, recall 0.992, and danger-map IoU 0.693. Its collision
+false-positive rate remains 0.472 at the validation-selected threshold. Gate
+IoU is 0.578; synthetic and real-flight mean corner errors are 7.03 px and
+22.64 px, respectively. The complete thresholds, metrics, and quantization
+constants are in the package `manifest.json`.
 
 A short NEMO QAT follow-up was also rejected: held-out collision AP improved
 to 0.659, but recall fell to 0.888, danger-map IoU collapsed to 0, and the gate
 mask activated on essentially every negative pixel. It is not packaged.
 
-Generated-C parity is also incomplete. Corner and gate-mask graphs pass GVSOC
-checksums. Increasing the encoder activation arena from 180 KB to 260 KB fixes
-its non-termination, but parity then diverges at the first residual addition
-because DORY drops its post-add multiplier. The danger branch separately
-diverges at its stride-2 depthwise layer. The workflow therefore refuses to
-create a deployment-ready network directory from this student.
-
-The recommended perception checkpoint remains the safety-selected full ESPNet
-teacher. Promote a compact firmware package only after its validation-selected
-threshold passes the held-out obstacle metrics and its NEMO, GVSOC, and live
-camera outputs agree. Then verify camera exposure and crop and run a tethered
-test before free flight. A successful build is not safety certification.
+The packaged firmware remains a deployment *candidate*, not a flight-approved
+model. Its generated-C parity and build gates have passed, but the remaining
+false-positive rate and real-flight corner tail error require a live-camera
+stream check and tethered flight validation. Verify camera exposure and crop,
+then test the validation-selected threshold under controlled lighting before
+free flight. A successful build and GVSOC checksum are not safety
+certification.
