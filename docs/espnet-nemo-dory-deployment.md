@@ -78,8 +78,10 @@ to 0.659, but recall fell to 0.888, danger-map IoU collapsed to 0, and the gate
 mask activated on essentially every negative pixel. It is not packaged.
 
 Generated-C parity is also incomplete. Corner and gate-mask graphs pass GVSOC
-checksums, but the danger branch diverges at its stride-2 depthwise layer and
-the encoder does not terminate in GVSOC. The workflow therefore refuses to
+checksums. Increasing the encoder activation arena from 180 KB to 260 KB fixes
+its non-termination, but parity then diverges at the first residual addition
+because DORY drops its post-add multiplier. The danger branch separately
+diverges at its stride-2 depthwise layer. The workflow therefore refuses to
 create a deployment-ready network directory from this student.
 
 The recommended perception checkpoint remains the safety-selected full ESPNet
