@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "comparison": "NEMO integer output versus ONNX Runtime output",
+  "layout": {
+    "nemo_fixture": "HWC",
+    "onnx": "NCHW"
+  },
+  "output_shape": [
+    1,
+    12,
+    15,
+    20
+  ],
+  "elements": 3600,
+  "different_elements": 0,
+  "max_absolute_lsb_error": 0,
+  "max_allowed_lsb_error": 1,
+  "first_differences": []
+}

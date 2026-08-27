@@ -47,11 +47,13 @@ fi
 # OpenOCD reaches the FT2232 (JTAG) over libusb, so pass the USB bus through
 # read-write (--privileged + /dev/bus/usb). The README's `gap8` alias mounts
 # /dev/bus read-only, which is fine for GVSOC/build but not for JTAG flashing.
-TTY_ARGS=()
-[ -t 0 ] && TTY_ARGS+=(-it)
+TTY_ARG=""
+if [ -t 0 ]; then
+  TTY_ARG="-it"
+fi
 
 exec docker run --rm \
-  "${TTY_ARGS[@]}" \
+  ${TTY_ARG:+$TTY_ARG} \
   --platform linux/arm64 \
   --privileged -v /dev/bus/usb:/dev/bus/usb \
   -e "GAPY_OPENOCD_CABLE=$CABLE" \

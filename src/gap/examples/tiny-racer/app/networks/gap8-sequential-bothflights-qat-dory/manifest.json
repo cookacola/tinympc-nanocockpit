@@ -1,0 +1,32 @@
+{
+  "format": "nanocockpit-generated-sequential-dory-v1",
+  "name": "gap8-sequential-bothflights-qat-dory",
+  "integration": "Tiny Racer decoder and CPX sequential-output stream integrated",
+  "input": {"dtype": "uint8", "layout": "NCHW", "shape": [1, 1, 120, 160]},
+  "output": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [15, 20, 12],
+    "bytes": 3600,
+    "logical_score": "uint8 * 0.06313495337963104 - 6.0",
+    "channels": {
+      "0-3": "ordered gate-corner heatmaps",
+      "4-7": "fixed-normal clearance scores",
+      "8-11": "fixed-normal confidence scores"
+    }
+  },
+  "dory": {
+    "fused_hardware_nodes": 24,
+    "total_macs": 28152000,
+    "max_l1_tile_bytes_estimate": 36417,
+    "l1_capacity_bytes": 64000,
+    "bnrelu_bits": 64,
+    "affine_intermediate": "int64_t"
+  },
+  "validation": {
+    "nemo_onnx_different_elements": 0,
+    "nemo_onnx_max_lsb_error": 0,
+    "gvsoc_status": "not passed: installed GVSOC launcher aborts before application output",
+    "hardware_status": "24-layer CRC diagnostic matches ONNX with the 64-bit affine path"
+  }
+}

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Display the annotated video stream from the Tiny Racer GAP8 firmware.
 
-The firmware sends a grayscale 160x160 frame through the NanoCockpit CPX
-streamer.  Its 10x8 danger map has already darkened the corresponding image
-regions on GAP8.  The four legacy inference floats temporarily contain the
-four corner positions as ``y * frame_width + x`` in TL, TR, BR, BL order.
+The sequential model runs on GAP8 and the firmware sends its annotated
+grayscale 160x160 frame through the NanoCockpit CPX streamer. The four legacy
+inference floats temporarily contain the four gate-corner positions as
+``y * frame_width + x`` in TL, TR, BR, BL order. Metadata version 12 also
+carries fixed-normal clearance/confidence summaries and input/output CRCs.
 
 This viewer does not run a neural network locally and never sends inference
 back to the Crazyflie.  It only returns the normal per-frame streamer reply so
@@ -33,6 +34,18 @@ CORNER_COLORS = (
     (255, 0, 255),
     (0, 255, 0),
 )
+CORNER_PEAK_MIN = -0.5
+CORNER_AMBIGUITY_MIN = 0.06
+GATE_REJECTION_REASONS = {
+    0: "accepted",
+    1: "confidence",
+    2: "tri area",
+    3: "tri ratio",
+    4: "quad convexity",
+    5: "quad area",
+    6: "quad ratio",
+    7: "geometry rescue",
+}
 
 
 def decode_packed_corners(metadata, width, height):
@@ -63,6 +76,55 @@ def decode_packed_corners(metadata, width, height):
     return corners
 
 
+def sequential_values(metadata):
+    """Return the sequential summary, or ``None`` for a v10 legacy stream."""
+    sequential = getattr(metadata, "sequential", None)
+    if sequential is None:
+        return None
+    return {
+        "gate_valid": bool(sequential.gate_valid),
+        "gate_rejection_reason": int(
+            getattr(sequential, "gate_rejection_reason", 0)
+        ),
+        "confident_corner_mask": int(
+            getattr(sequential, "confident_corner_mask", 0)
+        ),
+        "input_crc32": getattr(sequential, "input_crc32", None),
+        "output_crc32": getattr(sequential, "output_crc32", None),
+        "corner_peak_scores": tuple(
+            float(value) for value in sequential.corner_peak_scores
+        ),
+        "corner_ambiguity": tuple(
+            float(value) for value in sequential.corner_ambiguity
+        ),
+        "clearance_m": tuple(float(value) for value in sequential.clearance_m),
+        "clearance_confidence": tuple(
+            float(value) for value in sequential.clearance_confidence
+        ),
+    }
+
+
+def draw_sequential_summary(display, height, summary):
+    """Draw the sequential summary without obscuring the gate overlay."""
+    if summary is None:
+        return
+    clearance = "/".join(f"{value:.2f}" for value in summary["clearance_m"])
+    confidence = "/".join(
+        f"{value:+.2f}" for value in summary["clearance_confidence"]
+    )
+    cv2.putText(display, f"clearance m: {clearance}", (4, height - 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.34, (255, 255, 255), 1,
+                cv2.LINE_AA)
+    cv2.putText(display, f"confidence: {confidence}", (4, height - 6),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.34, (190, 190, 190), 1,
+                cv2.LINE_AA)
+    if summary["input_crc32"] is not None:
+        cv2.putText(display, "crc in/out: %08x/%08x" % (
+            summary["input_crc32"], summary["output_crc32"]),
+            (4, height - 36), cv2.FONT_HERSHEY_SIMPLEX, 0.29,
+            (190, 190, 190), 1, cv2.LINE_AA)
+
+
 def annotate_frame(frame, metadata):
     """Add host-side labels and decoded corner markers to a streamed frame."""
     if frame.dtype != np.uint8:
@@ -76,21 +138,62 @@ def annotate_frame(frame, metadata):
                 (4, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1,
                 cv2.LINE_AA)
 
+    summary = sequential_values(metadata) if metadata is not None else None
     corners = decode_packed_corners(metadata, width, height)
     if corners is None:
-        cv2.putText(display, "corners: unavailable", (4, height - 6),
+        cv2.putText(display, "corners: unavailable", (4, height - 52),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.40, (160, 160, 160), 1,
                     cv2.LINE_AA)
-        return display, None
+        draw_sequential_summary(display, height, summary)
+        return display, None, summary
 
-    polygon = np.asarray(corners, dtype=np.int32).reshape((-1, 1, 2))
-    cv2.polylines(display, [polygon], True, (255, 255, 255), 1, cv2.LINE_AA)
-    for name, color, point in zip(CORNER_NAMES, CORNER_COLORS, corners):
-        cv2.drawMarker(display, point, color, markerType=cv2.MARKER_CROSS,
+    accepted = summary is None or summary["gate_valid"]
+    if summary is None:
+        strong_indices = list(range(len(corners)))
+    else:
+        mask = summary["confident_corner_mask"]
+        # Older v12 firmware left these bytes as zero padding. Deriving a
+        # zero mask from its scores keeps saved streams and mixed deployments
+        # readable without changing the wire version.
+        if mask == 0:
+            for index, (peak, ambiguity) in enumerate(zip(
+                    summary["corner_peak_scores"],
+                    summary["corner_ambiguity"])):
+                if peak >= CORNER_PEAK_MIN and \
+                        ambiguity >= CORNER_AMBIGUITY_MIN:
+                    mask |= 1 << index
+        strong_indices = [index for index in range(len(corners))
+                          if mask & (1 << index)]
+    visible_indices = strong_indices if len(strong_indices) == 3 \
+        else list(range(len(corners)))
+    polygon = np.asarray([corners[index] for index in visible_indices],
+                         dtype=np.int32).reshape((-1, 1, 2))
+    polygon_color = (255, 255, 255) if accepted else (96, 96, 96)
+    if len(visible_indices) >= 3:
+        cv2.polylines(display, [polygon], True, polygon_color, 1, cv2.LINE_AA)
+    for index, (name, color, point) in enumerate(
+            zip(CORNER_NAMES, CORNER_COLORS, corners)):
+        strong = index in strong_indices
+        if len(strong_indices) == 3 and not strong:
+            continue
+        marker_color = color if strong else (96, 96, 96)
+        cv2.drawMarker(display, point, marker_color, markerType=cv2.MARKER_CROSS,
                        markerSize=10, thickness=1, line_type=cv2.LINE_AA)
         cv2.putText(display, name, (point[0] + 4, point[1] - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, color, 1, cv2.LINE_AA)
-    return display, corners
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, marker_color, 1,
+                    cv2.LINE_AA)
+    reason = 0 if summary is None else summary["gate_rejection_reason"]
+    if accepted:
+        status = "gate: geometry" if reason == 7 else "gate: accepted"
+    else:
+        status = "reject: %s" % GATE_REJECTION_REASONS.get(
+            reason, f"reason {reason}")
+    cv2.putText(display, status, (4, height - 52),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40,
+                (0, 255, 0) if accepted else (128, 128, 128), 1,
+                cv2.LINE_AA)
+    draw_sequential_summary(display, height, summary)
+    return display, corners, summary
 
 
 def parse_args():
@@ -123,8 +226,16 @@ def main():
         csv_file = (args.save_dir / "corners.csv").open("w", newline="",
                                                          encoding="utf-8")
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(("frame", "frame_timestamp_us", "tl_x", "tl_y",
-                             "tr_x", "tr_y", "br_x", "br_y", "bl_x", "bl_y"))
+        csv_writer.writerow(("frame", "frame_timestamp_us", "gate_valid",
+                             "gate_rejection_reason", "confident_corner_mask",
+                             "tl_x", "tl_y", "tr_x", "tr_y", "br_x", "br_y",
+                             "bl_x", "bl_y", "clearance_0_m", "clearance_1_m",
+                             "clearance_2_m", "clearance_3_m", "confidence_0",
+                             "confidence_1", "confidence_2", "confidence_3",
+                             "corner_peak_0", "corner_peak_1", "corner_peak_2",
+                             "corner_peak_3", "corner_ambiguity_0",
+                             "corner_ambiguity_1", "corner_ambiguity_2",
+                             "corner_ambiguity_3", "input_crc32", "output_crc32"))
 
     client = StreamerClient(host=args.host, port=args.port,
                             udp_send=args.udp_send)
@@ -135,22 +246,47 @@ def main():
             # frame so GAP8 can retain its round-trip timing statistics.
             client.send_reply(metadata, None)
 
-            display, corners = annotate_frame(frame, metadata)
+            display, corners, summary = annotate_frame(frame, metadata)
             shown += 1
 
             if csv_writer is not None:
-                row = [shown, metadata.frame_timestamp]
+                row = [shown, metadata.frame_timestamp,
+                       "" if summary is None else int(summary["gate_valid"]),
+                       "" if summary is None else
+                       summary["gate_rejection_reason"],
+                       "" if summary is None else
+                       summary["confident_corner_mask"]]
                 if corners is None:
                     row.extend(("",) * 8)
                 else:
                     row.extend(np.asarray(corners).flat)
+                if summary is None:
+                    row.extend(("",) * 18)
+                else:
+                    row.extend(summary["clearance_m"])
+                    row.extend(summary["clearance_confidence"])
+                    row.extend(summary["corner_peak_scores"])
+                    row.extend(summary["corner_ambiguity"])
+                    row.extend((summary["input_crc32"], summary["output_crc32"]))
                 csv_writer.writerow(row)
                 csv_file.flush()
                 cv2.imwrite(str(args.save_dir / f"frame_{shown:06d}.png"), display)
 
             if args.no_display:
                 if shown == 1 or shown % 30 == 0:
-                    print(f"frame {shown}: {frame.shape}, corners={corners}")
+                    valid = None if summary is None else summary["gate_valid"]
+                    peaks = None if summary is None else tuple(
+                        round(value, 2) for value in summary["corner_peak_scores"])
+                    ambiguity = None if summary is None else tuple(
+                        round(value, 2) for value in summary["corner_ambiguity"])
+                    reason = None if summary is None else GATE_REJECTION_REASONS.get(
+                        summary["gate_rejection_reason"],
+                        f"reason {summary['gate_rejection_reason']}")
+                    mask = None if summary is None else format(
+                        summary["confident_corner_mask"], "04b")
+                    print(f"frame {shown}: {frame.shape}, gate_valid={valid}, "
+                          f"reason={reason}, mask={mask}, corners={corners}, peaks={peaks}, "
+                          f"ambiguity={ambiguity}")
             else:
                 cv2.imshow("Tiny Racer stream", display)
                 if cv2.waitKey(1) & 0xFF == ord("q"):

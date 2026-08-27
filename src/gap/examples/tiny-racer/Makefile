@@ -29,6 +29,27 @@ APP_LDFLAGS += -g -Wl,--print-memory-usage -flto
 
 STDC_STREAM_ONLY ?= 0
 PARITY_TEST ?= 0
+STREAMER_ENABLE ?= 0
+UART_SEQUENTIAL_ENABLE ?= 1
+QUIET ?= 0
+
+# The AI-deck cannot use the diagnostic CPX/Wi-Fi streamer and the real-time
+# sequential UART producer in the same image.  The former retains camera
+# buffers while waiting for a host reply; flight firmware must use the latter.
+ifeq ($(STREAMER_ENABLE),1)
+ifeq ($(UART_SEQUENTIAL_ENABLE),1)
+$(error Select exactly one output path: STREAMER_ENABLE=1 UART_SEQUENTIAL_ENABLE=0, or the default UART flight build)
+endif
+APP_CFLAGS += -DSTREAMER_ENABLE=1
+endif
+
+ifeq ($(UART_SEQUENTIAL_ENABLE),1)
+APP_CFLAGS += -DUART_SEQUENTIAL_ENABLE=1
+endif
+
+ifeq ($(QUIET),1)
+APP_CFLAGS += -DTINY_RACER_QUIET=1
+endif
 
 ifeq ($(PARITY_TEST),1)
 ifeq ($(strip $(PARITY_INPUT)),)
@@ -43,10 +64,12 @@ ifeq ($(STDC_STREAM_ONLY),1)
 APP_CFLAGS += -DSTDC_STREAM_ONLY=1
 APP_SRCS += stream_stdc.c
 else
-APP_SRCS += main.c perception_map_uart.c
+APP_SRCS += main.c
 endif
-APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/streamer.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
-APP_SRCS += ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c
+APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
+ifeq ($(STREAMER_ENABLE),1)
+APP_SRCS += ../../lib/streamer.c ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c
+endif
 APP_SRCS += ../../lib/uart.c ../../lib/uart_protocol.c
 
 ifneq ($(STDC_STREAM_ONLY),1)

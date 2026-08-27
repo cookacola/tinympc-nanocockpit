@@ -138,16 +138,21 @@ The `--send-nn-output` switch is intentionally not used with the STDC viewer:
 the legacy streamer reply transports only four floats, whereas this network
 produces corner heatmaps and an obstacle map for the on-board controller.
 
-For the Tiny Racer firmware, the neural network instead runs on GAP8 and
-streams its already-annotated camera frame. Use the dedicated viewer; it shows
-the darkened danger regions and decodes the four temporary corner fields:
+For the Tiny Racer firmware, the sequential neural network runs on GAP8 and
+streams its already-annotated camera frame. Use the dedicated viewer; it
+displays the predicted gate corners encoded in the four temporary metadata
+fields:
 
 ```shell
 $ python tools/tiny_racer_stream_viewer.py -n 192.168.4.1
 ```
 
 Press `q` to close. Add `--save-dir stream_out/tiny-racer` to retain the
-annotated frames and decoded corners CSV.
+annotated frames and decoded corners CSV. The fixed-normal clearance and
+confidence fields are included in metadata version 12 and displayed/saved by
+the viewer. Update the GAP8 firmware and this Python client together; older
+metadata versions 10 and 11 remain readable but do not carry the input/output
+CRC32 fingerprints.
 
 ## Literature review
 In our paper, we review the body of work on nanorobotics over the last five years and demonstrate both the high research interest in the topic and the Crazyflie's prominent status as de-facto standard robot platform.

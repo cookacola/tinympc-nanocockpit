@@ -26,7 +26,9 @@
 #define __CONFIG_H__
 
 /************************** GENERAL SETTINGS **************************/
+#ifndef TINY_RACER_QUIET
 #define VERBOSE
+#endif
 
 // Enable debug prints in coroutine.h
 // #define CO_VERBOSE
@@ -59,7 +61,7 @@
 // #define STREAMER_DISABLE
 
 // Optional CPX streamer for explicit debugging builds only.  Keep this off
-// for the shared STDC DORY deployment: the normal deploy runs inference on
+// for the sequential DORY deployment: the normal deploy runs inference on
 // the GAP8 without allocating streamer frames or transmitting camera crops.
 // The laptop-inference path is the separate examples/streamer application.
 // #define STREAMER_ENABLE

@@ -92,7 +92,7 @@ class InferenceStampedMessage(ctypes.LittleEndianStructure):
         ("phi", ctypes.c_float),
     ]
 
-class StreamerMetadata(ctypes.LittleEndianStructure):
+class StreamerMetadataV10(ctypes.LittleEndianStructure):
     METADATA_VERSION = 10
 
     _pack_ = 1
@@ -131,6 +131,44 @@ class StreamerMetadata(ctypes.LittleEndianStructure):
         # Latest inference computed onboard by GAP
         ("inference", InferenceStampedMessage),
     ]
+
+
+class SequentialOutput(ctypes.LittleEndianStructure):
+    _pack_ = 1
+    _fields_ = [
+        ("gate_valid", ctypes.c_uint8),
+        ("gate_rejection_reason", ctypes.c_uint8),
+        ("confident_corner_mask", ctypes.c_uint8),
+        ("_padding", ctypes.c_uint8),
+        ("input_crc32", ctypes.c_uint32),
+        ("output_crc32", ctypes.c_uint32),
+        ("corner_peak_scores", ctypes.c_float * 4),
+        ("corner_ambiguity", ctypes.c_float * 4),
+        ("clearance_m", ctypes.c_float * 4),
+        ("clearance_confidence", ctypes.c_float * 4),
+    ]
+
+
+class SequentialOutputV11(ctypes.LittleEndianStructure):
+    _pack_ = 1
+    _fields_ = [
+        ("gate_valid", ctypes.c_uint8),
+        ("_padding", ctypes.c_uint8 * 3),
+        ("corner_peak_scores", ctypes.c_float * 4),
+        ("corner_ambiguity", ctypes.c_float * 4),
+        ("clearance_m", ctypes.c_float * 4),
+        ("clearance_confidence", ctypes.c_float * 4),
+    ]
+
+
+class StreamerMetadataV11(StreamerMetadataV10):
+    METADATA_VERSION = 11
+    _fields_ = [("sequential", SequentialOutputV11)]
+
+
+class StreamerMetadata(StreamerMetadataV10):
+    METADATA_VERSION = 12
+    _fields_ = [("sequential", SequentialOutput)]
 
 class StreamerStats(ctypes.LittleEndianStructure):
     _pack_ = 1
@@ -273,12 +311,22 @@ class StreamerClient:
             return frame, tof_frame, metadata
 
     def decode_frame(self, buffer):
-        metadata_size = ctypes.sizeof(StreamerMetadata)
-        metadata = StreamerMetadata.from_buffer_copy(buffer)
+        if not buffer:
+            raise ValueError("received empty streamer buffer")
+        metadata_version = buffer[0]
+        if metadata_version == StreamerMetadata.METADATA_VERSION:
+            metadata_type = StreamerMetadata
+        elif metadata_version == StreamerMetadataV11.METADATA_VERSION:
+            metadata_type = StreamerMetadataV11
+        elif metadata_version == StreamerMetadataV10.METADATA_VERSION:
+            metadata_type = StreamerMetadataV10
+        else:
+            raise ValueError(
+                f"Client supports StreamerMetadata v10/v11/v12 but received v{metadata_version}"
+            )
+        metadata_size = ctypes.sizeof(metadata_type)
+        metadata = metadata_type.from_buffer_copy(buffer)
         buffer = buffer[metadata_size:]
-
-        assert metadata.metadata_version == StreamerMetadata.METADATA_VERSION, \
-               f"Client supports StreamerMetadata v{StreamerMetadata.METADATA_VERSION} but received v{metadata.metadata_version}"
 
         frame = np \
             .frombuffer(buffer, dtype=f'<u{metadata.frame_bpp}') \

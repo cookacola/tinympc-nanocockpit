@@ -97,6 +97,28 @@ typedef struct {
   float phi;
 } __attribute__((packed)) inference_stamped_msg_t;
 
+#define UART_SEQUENTIAL_OBSTACLE_MSG_HEADER "\x90\x19\x8\x38"
+#define UART_SEQUENTIAL_DIRECTIONS 4
+typedef struct {
+  uint32_t stm32_timestamp;
+  uint16_t sequence;
+  uint8_t gate_valid;
+  uint8_t _reserved;
+  float clearance_m[UART_SEQUENTIAL_DIRECTIONS];
+  float confidence[UART_SEQUENTIAL_DIRECTIONS];
+} __attribute__((packed)) sequential_obstacle_msg_t;
+
+typedef struct {
+  uint8_t header[UART_HEADER_LENGTH];
+  sequential_obstacle_msg_t payload;
+  uint32_t checksum;
+} __attribute__((packed)) sequential_obstacle_packet_t;
+
+_Static_assert(sizeof(sequential_obstacle_msg_t) == 40,
+               "sequential obstacle payload ABI changed");
+_Static_assert(sizeof(sequential_obstacle_packet_t) == 48,
+               "sequential obstacle packet ABI changed");
+
 typedef struct uart_msg_s {
     uint8_t header[UART_HEADER_LENGTH];
     union {
@@ -123,11 +145,15 @@ typedef struct uart_protocol_s {
     co_fn_ctx_t message_ctx;
 
     uart_msg_t tx_message;
+    sequential_obstacle_packet_t tx_sequential;
 } uart_protocol_t;
 
 void uart_protocol_init(uart_protocol_t *protocol, uart_t *uart, co_fn_t callback);
 void uart_protocol_start(uart_protocol_t *protocol);
 
 void uart_protocol_send_inference_async(uart_protocol_t *protocol, inference_stamped_msg_t *msg, pi_task_t *done_task);
+void uart_protocol_send_sequential_async(
+    uart_protocol_t *protocol, const sequential_obstacle_msg_t *msg,
+    pi_task_t *done_task);
 
 #endif // __UART_PROTOCOL_H__
