@@ -34,9 +34,13 @@
 
 #include <stdint.h>
 
+static uint32_t s_i2c_error_count = 0;
+
 static inline uint8_t himax_reg_get8(pi_device_t *camera, uint16_t reg_addr) {
-    uint8_t value;
-    pi_camera_reg_get(camera, reg_addr, &value);
+    uint8_t value = 0;
+    if (pi_camera_reg_get(camera, reg_addr, &value) != 0) {
+        s_i2c_error_count++;
+    }
 
 #ifdef HIMAX_REG_DUMP
     DEBUG_PRINT("HIMAX reg 0x%04x = 0x%02x\n", reg_addr, value);
@@ -46,7 +50,9 @@ static inline uint8_t himax_reg_get8(pi_device_t *camera, uint16_t reg_addr) {
 }
 
 static inline void himax_reg_set8(pi_device_t *camera, uint16_t reg_addr, uint8_t new_value) {
-    pi_camera_reg_set(camera, reg_addr, &new_value);
+    if (pi_camera_reg_set(camera, reg_addr, &new_value) != 0) {
+        s_i2c_error_count++;
+    }
 
 #ifdef HIMAX_REG_VALIDATE
     uint8_t current_value = himax_reg_get8(camera, reg_addr);
@@ -126,7 +132,20 @@ int32_t himax_init(himax_t *himax) {
 
     himax->current_mode = HIMAX_MODE_UNKNOWN;
 
+#if !defined(__PLATFORM_GVSOC__) && !defined(__PLATFORM_RTL__)
+    const uint16_t model_id =
+        ((uint16_t)himax_reg_get8(&himax->camera, HIMAX_MODEL_ID_H) << 8) |
+        himax_reg_get8(&himax->camera, HIMAX_MODEL_ID_L);
+    if (model_id != 0x01B0u) {
+        return -2;
+    }
+#endif
+
     return status;
+}
+
+uint32_t himax_get_i2c_error_count(void) {
+    return s_i2c_error_count;
 }
 
 static uint16_t min_line_len_pck(himax_format_e format) {
@@ -345,6 +364,28 @@ void himax_configure(himax_t *himax) {
 
     // Commit register changes
     himax_reg_set8( camera, HIMAX_GRP_PARAM_HOLD, 0x01);
+
+#if !defined(__PLATFORM_GVSOC__) && !defined(__PLATFORM_RTL__)
+    /* GAP SDK's HIMAX reg_set/reg_get API always returns success even when its
+     * underlying synchronous I2C operation fails. Read back essential liveness
+     * and timing registers so failures become observable. */
+    if (himax_reg_get16(camera, HIMAX_MODEL_ID_H) != 0x01B0u) {
+        s_i2c_error_count++;
+    }
+    if (himax_reg_get8(camera, HIMAX_IMG_ORIENTATION) != image_orientation) {
+        s_i2c_error_count++;
+    }
+    if (himax_reg_get16(camera, HIMAX_FRAME_LEN_LINES_H) != frame_len_lines) {
+        s_i2c_error_count++;
+    }
+    if (himax_reg_get16(camera, HIMAX_LINE_LEN_PCK_H) != line_len_pck) {
+        s_i2c_error_count++;
+    }
+    if (himax_reg_get8(camera, HIMAX_BINNING_MODE) != binning_mode ||
+        himax_reg_get8(camera, HIMAX_QVGA_WIN_EN) != qvga_enable) {
+        s_i2c_error_count++;
+    }
+#endif
 }
 
 void himax_dump_config(himax_t *himax) {

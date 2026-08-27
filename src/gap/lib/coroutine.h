@@ -114,7 +114,8 @@ static inline void co_fn_resume(co_fn_ctx_t *ctx) {
 }
 
 static inline void co_fn_push_resume(co_fn_ctx_t *ctx) {
-    pi_task_push(pi_task_callback(&ctx->resume_task, (pi_callback_func_t)ctx->fn, ctx));
+    pi_task_push(pi_task_callback(&ctx->resume_task,
+                                  (void (*)(void *))ctx->fn, ctx));
 }
 
 // Start a new instance of a coroutine function

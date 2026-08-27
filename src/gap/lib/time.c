@@ -28,5 +28,7 @@
 
 uint32_t time_get_us() {
     // Timestamp based on 32kHz ref clock, according to GAP SDK should have a resolution of ~30usec
-    return pi_time_get_us();
+    /* rt_time_get_us is available in both the DORY-pinned GAP SDK and the
+     * NanoCockpit-supported GAP SDK 3.8.1. */
+    return rt_time_get_us();
 }

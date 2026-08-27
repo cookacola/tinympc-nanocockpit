@@ -149,16 +149,18 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
     network_dequantize_output(l2_buffer, network_output);
     trace_set(TRACE_USER_0, false);
 
-    latest_inference = (inference_stamped_msg_t) {
-        .stm32_timestamp = inference_args->stm32_timestamp,
-        .x = network_output[0],
-        .y = network_output[1],
-        .z = network_output[2],
-        .phi = network_output[3],
-    };
+// From the old_main, this is the Frontnet inference for visual servoing
+//    latest_inference = (inference_stamped_msg_t) {
+//        .stm32_timestamp = inference_args->stm32_timestamp,
+//        .x = network_output[0],
+//        .y = network_output[1],
+//        .z = network_output[2],
+//        .phi = network_output[3],
+//    };
 
-    uart_protocol_send_inference_async(&uart_protocol, &latest_inference, co_event_init(&network_done));
-    CO_WAIT(&network_done);
+// We disable UART transmission of the inference to the STM32 for now, as we only use the wifi transmission
+//    uart_protocol_send_inference_async(&uart_protocol, &latest_inference, co_event_init(&network_done));
+//    CO_WAIT(&network_done);
 }
 CO_FN_END()
 

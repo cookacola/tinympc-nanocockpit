@@ -148,6 +148,19 @@ void streamer_send_frame_async(
     pi_task_t *done_task
 );
 
+/* Send a rectangular gray8 view of a camera frame. The selected region is
+ * compacted in-place only after the caller has finished using the full camera
+ * buffer; this is intended for host visualization, not camera processing. */
+void streamer_send_frame_region_async(
+    streamer_t *streamer,
+    frame_t *frame,
+    uint16_t top, uint16_t left, uint16_t width, uint16_t height,
+    state_msg_t *state, uint32_t state_timestamp,
+    tof_msg_t *tof, uint32_t tof_timestamp,
+    inference_stamped_msg_t *inference,
+    pi_task_t *done_task
+);
+
 void streamer_receive_buffer_async(streamer_t *streamer, streamer_buffer_t *buffer, pi_task_t *done_task);
 void streamer_cancel_receive(streamer_t *streamer, streamer_buffer_t *buffer);
 
