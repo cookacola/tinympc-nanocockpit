@@ -1,0 +1,150 @@
+{
+  "format": "nanocockpit-espnet-dory-student-v1",
+  "name": "gap8-espnet-dory-student-v2",
+  "input": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [
+      160,
+      160,
+      2
+    ],
+    "channel_order": [
+      "previous",
+      "current"
+    ]
+  },
+  "outputs": {
+    "corner": {
+      "shape": [
+        40,
+        40,
+        4
+      ],
+      "bytes": 6400
+    },
+    "gate": {
+      "shape": [
+        40,
+        40,
+        1
+      ],
+      "bytes": 1600
+    },
+    "danger": {
+      "shape": [
+        10,
+        10,
+        1
+      ],
+      "bytes": 100
+    }
+  },
+  "integer_affine": {
+    "corner": {
+      "output_epsilon": 0.0723356157541275,
+      "output_offset": [
+        14.478659494018554,
+        16.664213998413086,
+        15.32217202911377,
+        13.0566767288208
+      ],
+      "learned_bias": [
+        -0.4199872314929962,
+        -0.33264702558517456,
+        -0.24883852899074554,
+        -0.4366225004196167
+      ]
+    },
+    "gate": {
+      "output_epsilon": 0.14315466582775116,
+      "output_offset": [
+        30.323662622070312
+      ],
+      "learned_bias": [
+        -0.2301979809999466
+      ]
+    },
+    "danger": {
+      "output_epsilon": 0.15094684064388275,
+      "output_offset": [
+        31.131497247314453
+      ],
+      "learned_bias": [
+        0.10768130421638489
+      ]
+    }
+  },
+  "thresholds": {
+    "danger_probability": 0.8228924870491028,
+    "danger_uint8": 216,
+    "gate_probability": 0.5,
+    "gate_uint8": 214,
+    "corner_uint8": [
+      191,
+      220,
+      201,
+      172
+    ]
+  },
+  "student_float_test": {
+    "obstacle": {
+      "danger_iou": 0.5461521691737519,
+      "collision_auroc": 0.9401009336850817,
+      "collision_ap": 0.6809239602466918,
+      "collision_recall": 0.9720670391061452,
+      "collision_threshold": 0.33,
+      "collision_positive_count": 358,
+      "examples": 3814
+    },
+    "gate": {
+      "gate_iou": 0.591324491150755,
+      "corner_mean_px": 5.8495049476623535,
+      "corner_p95_px": 42.24416732788086,
+      "real_corner_mean_px": 24.690998077392578,
+      "real_corner_p95_px": 94.52545166015625,
+      "negative_mask_pixel_rate": 0.00040666666666666667
+    }
+  },
+  "integer_test": {
+    "format": "espnet-dory-student-integer-ground-truth-v1",
+    "threshold_selected_on": "validation",
+    "selected_danger_threshold": 0.8228924870491028,
+    "obstacle_validation": {
+      "examples": 2044,
+      "collision_positive_count": 191,
+      "danger_iou_at_0_5": 0.6624650362188912,
+      "collision_auroc": 0.8420221347581254,
+      "collision_ap": 0.3228965052589538,
+      "collision_threshold": 0.8228924870491028,
+      "collision_recall": 0.9528795811518325,
+      "collision_false_positive_rate": 0.6772800863464652
+    },
+    "obstacle_test": {
+      "examples": 3814,
+      "collision_positive_count": 358,
+      "danger_iou_at_0_5": 0.6971307347804658,
+      "collision_auroc": 0.860003006672874,
+      "collision_ap": 0.2820932839215688,
+      "collision_threshold": 0.8228924870491028,
+      "collision_recall": 1.0,
+      "collision_false_positive_rate": 0.6527777777777778
+    },
+    "gate_test": {
+      "synthetic_examples": 2000,
+      "negative_examples": 3000,
+      "real_examples": 3603,
+      "gate_iou": 0.5732741392108719,
+      "corner_mean_px": 7.204615956972357,
+      "corner_p95_px": 54.137891387939455,
+      "real_corner_mean_px": 23.658921540794672,
+      "real_corner_p95_px": 98.62822570800769,
+      "negative_mask_pixel_rate": 0.0003070833333333333
+    }
+  },
+  "source_reports": {
+    "nemo": "/home/cchen/isaacsim-workspace/workspace/espnet_dory_student_v3_deployment/integer/nemo_espnet_dory_student_report.json",
+    "integer_evaluation": "/home/cchen/isaacsim-workspace/workspace/espnet_dory_student_v3_deployment/integer_ground_truth.json",
+    "student_summary": "/home/cchen/isaacsim-workspace/workspace/espnet_dory_student_v2/summary.json"
+  }
+}

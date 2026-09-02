@@ -75,6 +75,7 @@ static void camera_frame_free(camera_t *camera, frame_t *frame) {
 }
 
 void camera_init(camera_t *camera, co_fn_t consumer_callback) {
+    memset(camera, 0, sizeof(*camera));
     int32_t status = himax_init(&camera->himax);
 
     VERBOSE_PRINT("Camera init:\t\t\t%s\n", status ? "Failed" : "OK");
@@ -122,7 +123,51 @@ int camera_get_buffer_id(const camera_t *camera, const frame_t *frame) {
 }
 
 void camera_start(camera_t *camera) {
+    camera->last_capture_us = time_get_us();
+    camera->last_recovery_us = camera->last_capture_us;
+    camera->stage = CAMERA_STAGE_WAIT_CAPTURE;
     co_fn_push_start(&camera->camera_ctx, camera_task, (void *)camera, NULL);
+}
+
+#define CAMERA_CAPTURE_TIMEOUT_US 250000u
+#define CAMERA_RECOVERY_COOLDOWN_US 500000u
+
+void camera_watchdog_poll(camera_t *camera) {
+    const uint32_t now = time_get_us();
+    if (camera->stage != CAMERA_STAGE_WAIT_CAPTURE ||
+        (camera->capture_frame &&
+         co_event_is_done(&camera->capture_frame->done_event)) ||
+        now - camera->last_capture_us <= CAMERA_CAPTURE_TIMEOUT_US ||
+        now - camera->last_recovery_us <= CAMERA_RECOVERY_COOLDOWN_US) {
+        return;
+    }
+
+    /* A CPI request is already pending. Restarting CPI plus a full sensor
+     * standby/configure/stream cycle lets that same request complete, avoiding
+     * cancellation of the coroutine event it owns. */
+    himax_stop(&camera->himax);
+    himax_configure(&camera->himax);
+    himax_start(&camera->himax);
+    camera->last_recovery_us = time_get_us();
+    camera->last_capture_us = camera->last_recovery_us;
+    camera->recovery_count++;
+}
+
+uint32_t camera_get_recovery_count(const camera_t *camera) {
+    return camera->recovery_count;
+}
+
+uint32_t camera_get_i2c_error_count(const camera_t *camera) {
+    (void)camera;
+    return himax_get_i2c_error_count();
+}
+
+uint32_t camera_get_completed_capture_count(const camera_t *camera) {
+    return camera->completed_capture_count;
+}
+
+uint8_t camera_get_hardware_frame_count(const camera_t *camera) {
+    return camera->last_hardware_frame_count;
 }
 
 CO_FN_BEGIN(camera_task, camera_t *, camera)
@@ -142,6 +187,8 @@ CO_FN_BEGIN(camera_task, camera_t *, camera)
                 CO_WAIT(&frame->done_event);
             }
 
+            camera->stage = CAMERA_STAGE_WAIT_CAPTURE;
+            camera->capture_frame = frame;
             himax_capture_async(&camera->himax, frame, co_event_init(&frame->done_event));
             himax_start(&camera->himax);
             trace_set((capture_idx % CAMERA_BUFFERS == 0) ? TRACE_CAMERA_BUF_0 : TRACE_CAMERA_BUF_1, true);
@@ -154,9 +201,15 @@ CO_FN_BEGIN(camera_task, camera_t *, camera)
 
             CO_WAIT(&frame->done_event);
 
+            camera->capture_frame = NULL;
+            camera->last_capture_us = time_get_us();
+            camera->stage = CAMERA_STAGE_CROP;
             trace_set((crop_idx % CAMERA_BUFFERS == 0) ? TRACE_CAMERA_BUF_0 : TRACE_CAMERA_BUF_1, false);
             himax_stop(&camera->himax);
             frame->frame_id = himax_get_frame_count(&camera->himax);
+            camera->last_hardware_frame_count = frame->frame_id;
+            camera->completed_capture_count++;
+            frame->sequence_id = (uint32_t)crop_idx;
             frame->frame_timestamp = time_get_us();
 
 #ifdef HIMAX_CONFIG_DUMP_ONCE
@@ -172,10 +225,19 @@ CO_FN_BEGIN(camera_task, camera_t *, camera)
         }
 
         {
+            /* Consumer coroutines use application-owned static state and must
+             * not overlap. Previously frame N+1 could overtake frame N while it
+             * waited for CNN completion, reinitializing the same event/L2 job. */
+            if (consume_idx > 0) {
+                frame = &camera->frames[(consume_idx - 1) % CAMERA_BUFFERS];
+                CO_WAIT(&frame->done_event);
+            }
+
             frame = &camera->frames[consume_idx % CAMERA_BUFFERS];
 
             CO_WAIT(&frame->done_event);
 
+            camera->stage = CAMERA_STAGE_CONSUME;
             camera_consume_frame_async(camera, frame, co_event_init(&frame->done_event));
 
             consume_idx += 1;

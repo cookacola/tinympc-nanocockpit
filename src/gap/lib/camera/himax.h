@@ -68,5 +68,6 @@ void himax_dump_config(himax_t *himax);
 void himax_start(himax_t *himax);
 void himax_stop(himax_t *himax);
 void himax_capture_async(himax_t *himax, frame_t *frame, pi_task_t *done_task);
+uint32_t himax_get_i2c_error_count(void);
 
 #endif // __CAMERA_HIMAX_H__
