@@ -20,8 +20,9 @@ static uart_t uart;
 static uart_protocol_t uart_protocol;
 static camera_t camera;
 static pi_device_t cluster;
-static PI_L2 olgmd1_state_t olgmd_state;
 static PI_FC_L1 olgmd1_config_t olgmd_config;
+static PI_FC_L1 olgmd1_state_t *olgmd_state;
+static PI_CL_L1 olgmd1_scratch_t olgmd_scratch;
 static struct pi_cluster_task olgmd_cluster_task;
 static PI_FC_L1 state_msg_t latest_state;
 static PI_FC_L1 co_fn_ctx_t inference_ctx;
@@ -34,21 +35,21 @@ typedef struct {
 typedef struct {
   const uint8_t *frame;
   uint16_t stride;
+  uint16_t sequence;
   olgmd1_result_t result;
-  bool allocation_ok;
 } olgmd_cluster_args_t;
+
+static PI_L2 olgmd_cluster_args_t olgmd_args;
 
 static void olgmd_cluster_entry(void *opaque) {
   olgmd_cluster_args_t *args = (olgmd_cluster_args_t *)opaque;
-  olgmd1_scratch_t *scratch = pmsis_l1_malloc(sizeof(*scratch));
-  args->allocation_ok = scratch != NULL;
-  if (!scratch) {
+  if (args->sequence == 1u) {
+    olgmd1_prime(olgmd_state, &olgmd_scratch, args->frame, args->stride);
     args->result = (olgmd1_result_t){0};
     return;
   }
-  args->result = olgmd1_step(
-      &olgmd_state, scratch, args->frame, args->stride, &olgmd_config);
-  pmsis_l1_malloc_free(scratch, sizeof(*scratch));
+  olgmd1_step(olgmd_state, &olgmd_scratch, args->frame, args->stride,
+              &olgmd_config, &args->result);
 }
 
 static uint16_t wire_sequence(const frame_t *frame) {
@@ -74,7 +75,6 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   static PI_FC_L1 co_event_t tx_done;
   static PI_FC_L1 co_event_t olgmd_done;
   static PI_FC_L1 olgmd_threat_payload_t threat_payload;
-  static PI_FC_L1 olgmd_cluster_args_t olgmd_args;
   static PI_FC_L1 uint16_t sequence;
   static PI_FC_L1 uint32_t timestamp;
 
@@ -84,18 +84,15 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   olgmd_args = (olgmd_cluster_args_t) {
       .frame = args->frame->buffer,
       .stride = CAMERA_CROP_WIDTH,
+      .sequence = sequence,
   };
   pi_cluster_task(&olgmd_cluster_task, olgmd_cluster_entry, &olgmd_args);
+  olgmd_cluster_task.nb_cores = 1;
   olgmd_cluster_task.stack_size = 2048;
   olgmd_cluster_task.slave_stack_size = 0;
   pi_cluster_send_task_to_cl_async(
       &cluster, &olgmd_cluster_task, co_event_init(&olgmd_done));
   CO_WAIT(&olgmd_done);
-  if (!olgmd_args.allocation_ok) {
-    printf("olgmd-obstacle: unable to allocate %u-byte L1 scratch\n",
-           (unsigned)sizeof(olgmd1_scratch_t));
-    pmsis_exit(-2);
-  }
 
   threat_payload = (olgmd_threat_payload_t) {
       .source_timestamp_ms = timestamp,
@@ -107,6 +104,13 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   olgmd_send_threat_async(
       &uart, &threat_payload, co_event_init(&tx_done));
   CO_WAIT(&tx_done);
+  if (sequence <= 5u || (sequence % 30u) == 0u ||
+      threat_payload.imminent_threat || !olgmd_args.result.valid) {
+    printf("olgmd-obstacle: UART TX complete seq=%u threat=%u valid=%u\n",
+           (unsigned)sequence,
+           (unsigned)threat_payload.imminent_threat,
+           (unsigned)olgmd_args.result.valid);
+  }
   pi_task_push(args->done);
 }
 CO_FN_END()
@@ -128,6 +132,13 @@ static void main_task(void) {
   camera_init_frames_alloc(&camera);
   cluster_init(&cluster);
 
+  olgmd_state = pi_l2_malloc(sizeof(*olgmd_state));
+  if (!olgmd_state) {
+    printf("olgmd-obstacle: unable to allocate %u-byte L2 state\n",
+           (unsigned)sizeof(*olgmd_state));
+    pmsis_exit(-2);
+  }
+
   void *margin_probe = pi_l2_malloc(REQUIRED_FREE_L2_MARGIN);
   if (!margin_probe) {
     printf("olgmd-obstacle: less than %u bytes of free contiguous L2\n",
@@ -139,7 +150,7 @@ static void main_task(void) {
          (unsigned)REQUIRED_FREE_L2_MARGIN);
 
   olgmd_config = olgmd1_default_config();
-  olgmd1_init(&olgmd_state);
+  olgmd1_init(olgmd_state);
   trace_init();
   uart_protocol_start(&uart_protocol);
   camera_start(&camera);

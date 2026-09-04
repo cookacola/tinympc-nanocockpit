@@ -133,18 +133,19 @@ void olgmd1_init(olgmd1_state_t *state) {
   state->previous_sigmoid_q15 = 16384u;
 }
 
-olgmd1_result_t olgmd1_step(
+void olgmd1_prime(olgmd1_state_t *state, olgmd1_scratch_t *scratch,
+                  const uint8_t *frame, uint16_t stride) {
+  downsample_2x2(scratch->work, frame, stride);
+  memcpy(state->previous_image, scratch->work, OLGMD1_PIXELS);
+  state->initialized = true;
+}
+
+void olgmd1_step(
     olgmd1_state_t *state, olgmd1_scratch_t *scratch,
     const uint8_t *frame, uint16_t stride,
-    const olgmd1_config_t *config) {
-  olgmd1_result_t result = {0};
+    const olgmd1_config_t *config, olgmd1_result_t *result) {
+  *result = (olgmd1_result_t){0};
   downsample_2x2(scratch->work, frame, stride);
-
-  if (!state->initialized) {
-    memcpy(state->previous_image, scratch->work, OLGMD1_PIXELS);
-    state->initialized = true;
-    return result;
-  }
 
   const unsigned previous_plane = state->current_plane;
   const unsigned current_plane = previous_plane ^ 1u;
@@ -265,14 +266,13 @@ olgmd1_result_t olgmd1_step(
   }
 
   state->current_plane = (uint8_t)current_plane;
-  result.valid = true;
-  result.membrane_q15 = state->membrane_q15;
-  result.ffi_on_q8 = state->ffi_on_q8;
-  result.ffi_off_q8 = state->ffi_off_q8;
-  result.active_polarities = (uint8_t)((on_active ? 1u : 0u) |
+  result->valid = true;
+  result->membrane_q15 = state->membrane_q15;
+  result->ffi_on_q8 = state->ffi_on_q8;
+  result->ffi_off_q8 = state->ffi_off_q8;
+  result->active_polarities = (uint8_t)((on_active ? 1u : 0u) |
       (off_active ? 2u : 0u));
-  result.spike_count = spike_count;
-  result.threat = window != 0u &&
+  result->spike_count = spike_count;
+  result->threat = window != 0u &&
       accumulated_spikes >= config->collision_spikes;
-  return result;
 }

@@ -37,7 +37,13 @@ static void make_shifted_square(uint8_t background, uint8_t foreground,
 }
 
 static olgmd1_result_t step(const olgmd1_config_t *config) {
-  return olgmd1_step(&state, &scratch, frame, OLGMD1_INPUT_WIDTH, config);
+  olgmd1_result_t result = {0};
+  if (!state.initialized) {
+    olgmd1_prime(&state, &scratch, frame, OLGMD1_INPUT_WIDTH);
+    return result;
+  }
+  olgmd1_step(&state, &scratch, frame, OLGMD1_INPUT_WIDTH, config, &result);
+  return result;
 }
 
 static void test_stationary(void) {

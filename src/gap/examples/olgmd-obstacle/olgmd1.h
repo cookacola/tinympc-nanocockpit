@@ -56,9 +56,11 @@ typedef struct {
 
 olgmd1_config_t olgmd1_default_config(void);
 void olgmd1_init(olgmd1_state_t *state);
-olgmd1_result_t olgmd1_step(
+void olgmd1_prime(olgmd1_state_t *state, olgmd1_scratch_t *scratch,
+                  const uint8_t *frame, uint16_t stride);
+void olgmd1_step(
     olgmd1_state_t *state, olgmd1_scratch_t *scratch,
     const uint8_t *frame, uint16_t stride,
-    const olgmd1_config_t *config);
+    const olgmd1_config_t *config, olgmd1_result_t *result);
 
 #endif
