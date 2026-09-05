@@ -75,6 +75,7 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   static PI_FC_L1 co_event_t tx_done;
   static PI_FC_L1 co_event_t olgmd_done;
   static PI_FC_L1 olgmd_threat_payload_t threat_payload;
+  static PI_FC_L1 olgmd_diagnostic_payload_t diagnostic_payload;
   static PI_FC_L1 uint16_t sequence;
   static PI_FC_L1 uint32_t timestamp;
 
@@ -103,6 +104,18 @@ CO_FN_BEGIN(inference_task, inference_args_t *, args)
   };
   olgmd_send_threat_async(
       &uart, &threat_payload, co_event_init(&tx_done));
+  CO_WAIT(&tx_done);
+  diagnostic_payload = (olgmd_diagnostic_payload_t) {
+      .source_timestamp_ms = timestamp,
+      .frame_sequence = sequence,
+      .membrane_q15 = olgmd_args.result.membrane_q15,
+      .spike_count = olgmd_args.result.spike_count,
+      .imminent_threat = threat_payload.imminent_threat,
+      .valid = olgmd_args.result.valid ? 1u : 0u,
+      .reserved = 0u,
+  };
+  olgmd_send_diagnostic_async(
+      &uart, &diagnostic_payload, co_event_init(&tx_done));
   CO_WAIT(&tx_done);
   if (sequence <= 5u || (sequence % 30u) == 0u ||
       threat_payload.imminent_threat || !olgmd_args.result.valid) {
