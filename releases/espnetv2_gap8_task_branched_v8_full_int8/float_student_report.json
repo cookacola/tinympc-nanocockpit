@@ -1,0 +1,144 @@
+{
+  "architecture": "v8_task_branched",
+  "branch_point": "after_shared_stem_16x80x80",
+  "collision_distillation_weight": 0.25,
+  "collision_initial_checkpoint": "/home/cchen/drone_rl/outputs/espnetv2_imav22_gate_rail/gap8_obstacle_priority_float_v1/best.pt",
+  "collision_label_weight": 1.0,
+  "collision_pretrained_parameter_tensors": 48,
+  "collision_training": "ground_truth_bce_plus_teacher_probability_soft_bce",
+  "corner_output_order": [
+    "left_top",
+    "right_top",
+    "left_bottom",
+    "right_bottom"
+  ],
+  "corner_regression_weight": 1.0,
+  "dataset": "/home/cchen/drone_rl/outputs/imav22_gate_recovery_rtx_v1_20260901",
+  "dataset_manifest_sha256": "22db11faf74cca91331007d4e64cd4e0590dd833a33ed5b108498c8f8b957c29",
+  "firmware_v4_action_packet_changed": false,
+  "format": "espnetv2-roll-robust-gap8-student-v8-task-branched",
+  "gate_nonregression_checks": {
+    "affordance_argmax_agreement": true,
+    "affordance_probability_mae": true,
+    "collision_probability_mae": false,
+    "corner_decoded_mean_error_px": true,
+    "corner_decoded_p95_error_px": true,
+    "visibility_probability_mae": true,
+    "visibility_threshold_agreement": true
+  },
+  "gate_path_frozen_during_obstacle_training": true,
+  "gate_specific_losses_on_obstacle_rows": false,
+  "gate_train_pairs": 3360,
+  "gate_validation_baseline_score": 0.27950289805636463,
+  "gate_validation_limits": {
+    "affordance_argmax_agreement_min": 0.985,
+    "affordance_probability_mae_max": 0.05,
+    "collision_probability_mae_max": 0.105,
+    "corner_decoded_mean_error_px_max": 6.0,
+    "corner_decoded_p95_error_px_max": 15.0,
+    "visibility_probability_mae_max": 0.067,
+    "visibility_threshold_agreement_min": 0.925
+  },
+  "gate_validation_nonregression_limit": 0.27950289805636463,
+  "global_output_order": [
+    "collision_left",
+    "collision_center",
+    "collision_right",
+    "affordance_none",
+    "affordance_opening_left",
+    "affordance_opening_right",
+    "visibility_left_rail",
+    "visibility_right_rail"
+  ],
+  "global_regression_weight": 2.0,
+  "initial_checkpoint": "/home/cchen/drone_rl/outputs/espnetv2_imav22_gate_rail/gap8_roll_robust_multitask_v12_shallow_plain_deep/best.pt",
+  "limitations": [
+    "distillation preserves outputs approximately, not bit-exactly",
+    "validation data only; sealed test and physical HM01B0 are not evaluated"
+  ],
+  "obstacle_priority": true,
+  "obstacle_replay": {
+    "index": "/home/cchen/drone_rl/outputs/espnetv2_imav22/roll_robust_v3_20260831/index.jsonl",
+    "index_format": "two-frame-espnetv2-lite-sector-collision-index-v2",
+    "index_sha256": "de4122ce729965f9672a2ec56b83e47c2d827bb978cea48a75a66857d4f944af",
+    "positive_fraction": 0.5,
+    "seed": 20260901,
+    "selected_train_clear_pairs": 32950,
+    "selected_train_pairs": 65900,
+    "selected_train_positive_pairs": 32950,
+    "test_rows_deserialized": 0,
+    "test_rows_skipped": 28200,
+    "train_pool_pairs": 169200,
+    "validation_pairs": 28200,
+    "validation_sampling": "full_natural_index_order"
+  },
+  "obstacle_to_gate_train_ratio": 19.613095238095237,
+  "obstacle_train_pairs": 65900,
+  "obstacle_validation_pairs": 28200,
+  "online_teacher_augmentation": false,
+  "original_obstacle_validation": {
+    "any_danger_f1": 0.7485135576608951,
+    "any_danger_precision": 0.7381443298969073,
+    "any_danger_recall": 0.7591782637508283,
+    "label_binary_cross_entropy": 0.2765059769153595,
+    "macro_average_precision": 0.7917371269810651,
+    "macro_roc_auc": 0.9189120845718989,
+    "macro_sector_recall": 0.7093340754508972,
+    "samples": 28200,
+    "sector_average_precision": [
+      0.7569074091339358,
+      0.8442227229932935,
+      0.7740812488159658
+    ],
+    "sector_precision": [
+      0.6905961632728577,
+      0.7243589758872986,
+      0.7710843086242676
+    ],
+    "sector_recall": [
+      0.6932153105735779,
+      0.7964586615562439,
+      0.6383281946182251
+    ],
+    "sector_roc_auc": [
+      0.9037773763500304,
+      0.9378056248344927,
+      0.9151532525311733
+    ],
+    "teacher_collision_probability_mae": 0.13666166365146637
+  },
+  "output_offset_policy": "retained_from_initial_checkpoint",
+  "partitions": [
+    "encoder",
+    "global_head",
+    "gate_encoder",
+    "gate_head",
+    "corner_head"
+  ],
+  "pretrained_parameter_tensors": 172,
+  "sealed_test_evaluated": false,
+  "selected_epoch": 11,
+  "selection_policy": "natural_obstacle_validation_collision_priority_v1",
+  "selection_split": "full_natural_original_obstacle_validation_collision_priority",
+  "status": "distilled_float_deployment_candidate",
+  "teacher": "/home/cchen/drone_rl/outputs/espnetv2_imav22_gate_rail/promoted/imav22_gate_rail_roll_robust_multitask_v2",
+  "teacher_promotion_manifest_sha256": "33ce22e57495f7f8223665dd727ac84d59d700ebf6ce18031ab96e792ac79f19",
+  "tiny_mpc_u0_boundary_changed": false,
+  "train_pairs": 69260,
+  "trainable_parameters": 326931,
+  "validation_float_student_parity": {
+    "affordance_argmax_agreement": 0.9885714054107666,
+    "affordance_probability_mae": 0.04713040962815285,
+    "collision_probability_mae": 0.11062228679656982,
+    "collision_probability_max_abs": 0.7984232306480408,
+    "corner_decoded_mean_error_px": 5.740993976593018,
+    "corner_decoded_p95_error_px": 14.646703720092773,
+    "raw_corner_heatmap_mae": 0.4096011519432068,
+    "raw_global_mae": 0.8975063562393188,
+    "raw_global_max_abs": 8.115874290466309,
+    "samples": 1400,
+    "visibility_probability_mae": 0.06299127638339996,
+    "visibility_threshold_agreement": 0.9292857050895691
+  },
+  "validation_pairs": 1400
+}

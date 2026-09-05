@@ -1,0 +1,122 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.9488440377371652,
+    "validation_task_error": 0.06836660951375961,
+    "validation_affordance_probability_mae": 0.024854645133018494,
+    "validation_affordance_argmax_agreement": 0.9871428608894348,
+    "validation_visibility_probability_mae": 0.03592268377542496,
+    "validation_visibility_threshold_agreement": 0.9825000166893005,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 2,
+    "train_loss": 0.8505380380721319,
+    "validation_task_error": 0.057741882279515266,
+    "validation_affordance_probability_mae": 0.02075308747589588,
+    "validation_affordance_argmax_agreement": 0.991428554058075,
+    "validation_visibility_probability_mae": 0.03136378526687622,
+    "validation_visibility_threshold_agreement": 0.9860714077949524,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 3,
+    "train_loss": 0.8322879666373844,
+    "validation_task_error": 0.05522190034389496,
+    "validation_affordance_probability_mae": 0.02050689049065113,
+    "validation_affordance_argmax_agreement": 0.991428554058075,
+    "validation_visibility_probability_mae": 0.02900071255862713,
+    "validation_visibility_threshold_agreement": 0.9857142567634583,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 4,
+    "train_loss": 0.8230841897782826,
+    "validation_task_error": 0.0524242278188467,
+    "validation_affordance_probability_mae": 0.018833359703421593,
+    "validation_affordance_argmax_agreement": 0.9921428561210632,
+    "validation_visibility_probability_mae": 0.02876943349838257,
+    "validation_visibility_threshold_agreement": 0.9885714054107666,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 5,
+    "train_loss": 0.8177347489765712,
+    "validation_task_error": 0.050002776086330414,
+    "validation_affordance_probability_mae": 0.017827240750193596,
+    "validation_affordance_argmax_agreement": 0.9928571581840515,
+    "validation_visibility_probability_mae": 0.0271755401045084,
+    "validation_visibility_threshold_agreement": 0.9871428608894348,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 6,
+    "train_loss": 0.8144298621586391,
+    "validation_task_error": 0.04984102584421635,
+    "validation_affordance_probability_mae": 0.017654990777373314,
+    "validation_affordance_argmax_agreement": 0.9928571581840515,
+    "validation_visibility_probability_mae": 0.026739615947008133,
+    "validation_visibility_threshold_agreement": 0.9853571653366089,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 7,
+    "train_loss": 0.8097916739327568,
+    "validation_task_error": 0.04892415553331375,
+    "validation_affordance_probability_mae": 0.017101025208830833,
+    "validation_affordance_argmax_agreement": 0.9928571581840515,
+    "validation_visibility_probability_mae": 0.026733847334980965,
+    "validation_visibility_threshold_agreement": 0.9867857098579407,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 8,
+    "train_loss": 0.8074773901984805,
+    "validation_task_error": 0.05036449432373047,
+    "validation_affordance_probability_mae": 0.018340762704610825,
+    "validation_affordance_argmax_agreement": 0.9928571581840515,
+    "validation_visibility_probability_mae": 0.02675587311387062,
+    "validation_visibility_threshold_agreement": 0.9860714077949524,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 9,
+    "train_loss": 0.8057188414392017,
+    "validation_task_error": 0.048714376986026764,
+    "validation_affordance_probability_mae": 0.017054805532097816,
+    "validation_affordance_argmax_agreement": 0.993571400642395,
+    "validation_visibility_probability_mae": 0.027463136240839958,
+    "validation_visibility_threshold_agreement": 0.989642858505249,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 10,
+    "train_loss": 0.805044140134539,
+    "validation_task_error": 0.05216389335691929,
+    "validation_affordance_probability_mae": 0.019918903708457947,
+    "validation_affordance_argmax_agreement": 0.991428554058075,
+    "validation_visibility_probability_mae": 0.02697713114321232,
+    "validation_visibility_threshold_agreement": 0.987500011920929,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 11,
+    "train_loss": 0.8046375070299421,
+    "validation_task_error": 0.051067790016531944,
+    "validation_affordance_probability_mae": 0.017916521057486534,
+    "validation_affordance_argmax_agreement": 0.9921428561210632,
+    "validation_visibility_probability_mae": 0.027704834938049316,
+    "validation_visibility_threshold_agreement": 0.9860714077949524,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  },
+  {
+    "epoch": 12,
+    "train_loss": 0.8031325351624262,
+    "validation_task_error": 0.05099942721426487,
+    "validation_affordance_probability_mae": 0.018299173563718796,
+    "validation_affordance_argmax_agreement": 0.9921428561210632,
+    "validation_visibility_probability_mae": 0.028057394549250603,
+    "validation_visibility_threshold_agreement": 0.9892857074737549,
+    "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1"
+  }
+]

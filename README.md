@@ -89,6 +89,10 @@ $ source venv/bin/activate
 $ cfclient
 ```
 
+The separate ESPNet v8 collision-and-gate model is installed as
+`examples/espnet-task-branched`. Its build, flash, runtime contract, and
+verification instructions are in [the ESPNet v8 deployment guide](docs/espnet-task-branched-deployment.md).
+
 ### View the deployed GAP8 perception network
 
 For laptop-only inference, build and flash the dedicated GAP8 streamer. This

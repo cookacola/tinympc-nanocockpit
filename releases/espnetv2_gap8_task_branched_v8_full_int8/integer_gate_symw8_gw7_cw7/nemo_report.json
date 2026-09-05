@@ -1,0 +1,457 @@
+{
+  "format": "espnetv2-gap8-nemo-int8-v1",
+  "activation_bits": 8,
+  "signed_weight_bits": null,
+  "weight_quantization": null,
+  "partition_weight_quantization": {
+    "gate_encoder": {
+      "signed_weight_bits": 8,
+      "weight_quantization": "symmetric",
+      "signed_storage": "int8",
+      "signed_range_policy": "reject_pre_onnx_never_clip"
+    },
+    "gate_head": {
+      "signed_weight_bits": 7,
+      "weight_quantization": "asymmetric",
+      "signed_storage": "int8",
+      "signed_range_policy": "reject_pre_onnx_never_clip"
+    },
+    "corner_head": {
+      "signed_weight_bits": 7,
+      "weight_quantization": "asymmetric",
+      "signed_storage": "int8",
+      "signed_range_policy": "reject_pre_onnx_never_clip"
+    }
+  },
+  "input": {
+    "dtype": "uint8",
+    "layout": "HWC",
+    "shape": [
+      160,
+      160,
+      3
+    ],
+    "channel_order": [
+      "previous_gray",
+      "current_gray",
+      "signed_frame_difference"
+    ],
+    "signed_difference_formula": "(current-previous+255)//2"
+  },
+  "partitions": [
+    {
+      "graph": "gate_encoder",
+      "onnx": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/integer_gate_symw8_gw7_cw7/gate_encoder/gate_encoder_int.onnx",
+      "operators": [
+        "Add",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Floor",
+        "Mul"
+      ],
+      "output_epsilon": 0.05329068750143051,
+      "output_offset": [
+        0.0
+      ],
+      "parity_feature_mae": 0.5115172266960144,
+      "parity_feature_max": 8.142541885375977,
+      "integer_output_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "integer_nonzero": 45567,
+      "integer_layers": 11,
+      "residual_adds_configured": 13,
+      "residual_requantization_factor": 1,
+      "bn_calibration_range_factor": 8,
+      "data_driven_batchnorm_calibration": false,
+      "qd_int_accurate": true,
+      "qat_checkpoint": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/gate_qat_symw8_gw7_cw7/gate_encoder_qat.pt",
+      "activation_bits": 8,
+      "signed_weight_bits": 8,
+      "parity_images": 1400,
+      "weight_quantization": "symmetric",
+      "convolution_bias_integerization": [],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "stem.0.0.weight",
+          "minimum": -126,
+          "maximum": 98,
+          "values": 432
+        },
+        {
+          "name": "stem.1.depthwise.0.weight",
+          "minimum": -114,
+          "maximum": 127,
+          "values": 144
+        },
+        {
+          "name": "stem.1.pointwise.0.weight",
+          "minimum": -126,
+          "maximum": 127,
+          "values": 256
+        },
+        {
+          "name": "stage1.0.depthwise.0.weight",
+          "minimum": -127,
+          "maximum": 101,
+          "values": 144
+        },
+        {
+          "name": "stage1.0.pointwise.0.weight",
+          "minimum": -126,
+          "maximum": 96,
+          "values": 512
+        },
+        {
+          "name": "stage1.1.block.depthwise.0.weight",
+          "minimum": -127,
+          "maximum": 122,
+          "values": 288
+        },
+        {
+          "name": "stage1.1.block.pointwise.0.weight",
+          "minimum": -126,
+          "maximum": 111,
+          "values": 1024
+        },
+        {
+          "name": "stage1.2.block.depthwise.0.weight",
+          "minimum": -117,
+          "maximum": 127,
+          "values": 288
+        },
+        {
+          "name": "stage1.2.block.pointwise.0.weight",
+          "minimum": -125,
+          "maximum": 118,
+          "values": 1024
+        }
+      ],
+      "signed_range_policy": "reject_pre_onnx_never_clip"
+    },
+    {
+      "graph": "gate_head",
+      "onnx": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/integer_gate_symw8_gw7_cw7/gate_head/gate_head_int.onnx",
+      "operators": [
+        "AveragePool",
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Floor",
+        "Mul",
+        "Pad"
+      ],
+      "input_epsilon": 0.05329068750143051,
+      "output_epsilon": 0.04027872160077095,
+      "output_offset": [
+        6.493105275726318,
+        7.4498861862182615,
+        8.106984002685547,
+        5.083833081817627,
+        5.346825463867187
+      ],
+      "output_offset_percentile": 0.0,
+      "output_offset_cap": 12.0,
+      "learned_bias": [
+        7.6221489906311035,
+        7.861115455627441,
+        8.93895149230957,
+        6.050937652587891,
+        6.165261745452881
+      ],
+      "parity_logit_mae": 0.2776921043718117,
+      "parity_logit_max": 1.5479628013610842,
+      "parity_probability_mae": 0.004741889184232286,
+      "parity_probability_max": 0.11753858753264002,
+      "parity_corner_peak_mean_heatmap_px": null,
+      "parity_corner_peak_p95_heatmap_px": null,
+      "integer_output_shape": [
+        1,
+        5,
+        1,
+        1
+      ],
+      "integer_nonzero": 5,
+      "integer_layers": 7,
+      "residual_adds_configured": 6,
+      "residual_requantization_factor": 1,
+      "bn_calibration_range_factor": 8,
+      "data_driven_batchnorm_calibration": false,
+      "qd_int_accurate": true,
+      "qat_checkpoint": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/gate_qat_symw8_gw7_cw7/gate_head_qat.pt",
+      "activation_bits": 8,
+      "signed_weight_bits": 7,
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 1400,
+      "weight_quantization": "asymmetric",
+      "convolution_bias_integerization": [
+        {
+          "name": "head_features.0.0",
+          "output_epsilon": 0.0002701015619095415,
+          "minimum": -231,
+          "maximum": 320
+        },
+        {
+          "name": "head_features.1.0",
+          "output_epsilon": 0.000860579835716635,
+          "minimum": -54,
+          "maximum": 95
+        },
+        {
+          "name": "head_features.2.0",
+          "output_epsilon": 0.0017954620998352766,
+          "minimum": -8,
+          "maximum": 7
+        },
+        {
+          "name": "head_features.3.0",
+          "output_epsilon": 0.002065039239823818,
+          "minimum": -10,
+          "maximum": 6
+        },
+        {
+          "name": "head_features.4.0",
+          "output_epsilon": 0.0020391270518302917,
+          "minimum": -15,
+          "maximum": 10
+        },
+        {
+          "name": "output_proj.0",
+          "output_epsilon": 0.0018345792777836323,
+          "minimum": 2771,
+          "maximum": 4418
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "head_features.0.0.weight",
+          "minimum": -76,
+          "maximum": 50,
+          "values": 18432
+        },
+        {
+          "name": "head_features.1.0.weight",
+          "minimum": -72,
+          "maximum": 55,
+          "values": 55296
+        },
+        {
+          "name": "head_features.2.0.weight",
+          "minimum": -19,
+          "maximum": 107,
+          "values": 82944
+        },
+        {
+          "name": "head_features.3.0.weight",
+          "minimum": -22,
+          "maximum": 105,
+          "values": 82944
+        },
+        {
+          "name": "head_features.4.0.weight",
+          "minimum": -23,
+          "maximum": 104,
+          "values": 82944
+        },
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -66,
+          "maximum": 61,
+          "values": 480
+        }
+      ],
+      "signed_range_policy": "reject_pre_onnx_never_clip",
+      "encoder_signed_weight_bits": 8,
+      "encoder_weight_quantization": "symmetric",
+      "teacher_logit_offset": [
+        7.631468296051025,
+        7.880547523498535,
+        8.962564468383789,
+        6.062285423278809,
+        6.153802394866943
+      ],
+      "runtime_decode": "teacher_logit=uint8*output_epsilon-nemo_output_offset+learned_bias-teacher_logit_offset",
+      "task_parity": {
+        "format": "espnetv2-gap8-gate-task-parity-v1",
+        "gate_task_decode_abi": "espnetv2_gap8_gate_task_logits_offset_v1",
+        "samples": 1400,
+        "affordance_probability_mae": 0.020271476358175278,
+        "affordance_argmax_agreement": 0.9907142857142858,
+        "visibility_probability_mae": 0.032905787229537964,
+        "visibility_threshold_agreement": 0.985,
+        "prediction_source": "gate_head_parity_predictions.npz",
+        "gate_logits_offset": [
+          7.631468296051025,
+          7.880547523498535,
+          8.962564468383789,
+          6.062285423278809,
+          6.153802394866943
+        ]
+      }
+    },
+    {
+      "graph": "corner_head",
+      "onnx": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/integer_gate_symw8_gw7_cw7/corner_head/corner_head_int.onnx",
+      "operators": [
+        "Cast",
+        "Clip",
+        "Constant",
+        "Conv",
+        "Div",
+        "Mul",
+        "Pad"
+      ],
+      "input_epsilon": 0.05329068750143051,
+      "output_epsilon": 0.04822007566690445,
+      "output_offset": [
+        0.7203772793769836,
+        0.9978923932075501,
+        2.8106522282123567,
+        3.4539932325839997
+      ],
+      "output_offset_percentile": 0.1,
+      "output_offset_cap": null,
+      "learned_bias": [
+        1.8188837766647339,
+        2.709958076477051,
+        5.4180908203125,
+        6.063990592956543
+      ],
+      "parity_logit_mae": 1.8651286957728443,
+      "parity_logit_max": 7.076988698577881,
+      "parity_probability_mae": 0.07070436448782808,
+      "parity_probability_max": 0.27624154574623383,
+      "parity_corner_peak_mean_heatmap_px": 1.7315069399028322,
+      "parity_corner_peak_p95_heatmap_px": 11.045361017187261,
+      "integer_output_shape": [
+        1,
+        4,
+        20,
+        20
+      ],
+      "integer_nonzero": 750,
+      "integer_layers": 5,
+      "residual_adds_configured": 5,
+      "residual_requantization_factor": 1,
+      "bn_calibration_range_factor": 8,
+      "data_driven_batchnorm_calibration": false,
+      "qd_int_accurate": true,
+      "qat_checkpoint": "outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/gate_qat_symw8_gw7_cw7/corner_head_qat.pt",
+      "activation_bits": 8,
+      "signed_weight_bits": 7,
+      "qat_offset_source": "checkpoint_metadata",
+      "parity_images": 1400,
+      "weight_quantization": "asymmetric",
+      "convolution_bias_integerization": [
+        {
+          "name": "head_features.0.0",
+          "output_epsilon": 0.00017329597903881222,
+          "minimum": -393,
+          "maximum": 556
+        },
+        {
+          "name": "head_features.1.0",
+          "output_epsilon": 0.0004519208159763366,
+          "minimum": -148,
+          "maximum": 160
+        },
+        {
+          "name": "head_features.2.0",
+          "output_epsilon": 0.00032241331064142287,
+          "minimum": -57,
+          "maximum": 65
+        },
+        {
+          "name": "head_features.3.0",
+          "output_epsilon": 0.00037038978189229965,
+          "minimum": -72,
+          "maximum": 66
+        },
+        {
+          "name": "output_proj.0",
+          "output_epsilon": 0.00017751041741576046,
+          "minimum": 4031,
+          "maximum": 19382
+        }
+      ],
+      "onnx_int8_convolution_weights": [
+        {
+          "name": "head_features.0.0.weight",
+          "minimum": -58,
+          "maximum": 68,
+          "values": 18432
+        },
+        {
+          "name": "head_features.1.0.weight",
+          "minimum": -93,
+          "maximum": 35,
+          "values": 36864
+        },
+        {
+          "name": "head_features.2.0.weight",
+          "minimum": -26,
+          "maximum": 101,
+          "values": 36864
+        },
+        {
+          "name": "head_features.3.0.weight",
+          "minimum": -29,
+          "maximum": 97,
+          "values": 36864
+        },
+        {
+          "name": "output_proj.0.weight",
+          "minimum": -58,
+          "maximum": 69,
+          "values": 256
+        }
+      ],
+      "signed_range_policy": "reject_pre_onnx_never_clip",
+      "encoder_signed_weight_bits": 8,
+      "encoder_weight_quantization": "symmetric",
+      "teacher_logit_offset": [
+        1.8108267784118652,
+        2.66961407661438,
+        5.399443626403809,
+        6.064487934112549
+      ],
+      "runtime_decode": "teacher_logit=uint8*output_epsilon-nemo_output_offset+learned_bias-teacher_logit_offset",
+      "task_parity": {
+        "format": "espnetv2-gap8-visible-corner-parity-v1",
+        "endpoint_masking": "manifest_visible_endpoints_only",
+        "samples": 1400,
+        "visible_endpoint_count": 2800,
+        "corner_peak_mean_heatmap_px": 0.3559711554771231,
+        "corner_peak_p95_heatmap_px": 1.4142135623730951,
+        "prediction_source": "corner_head_parity_predictions.npz"
+      }
+    }
+  ],
+  "exported_partitions": [
+    "gate_encoder",
+    "gate_head",
+    "corner_head"
+  ],
+  "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+  "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2",
+  "promoted_sector_thresholds": [
+    0.6197193861,
+    0.5278742313,
+    0.6485541463
+  ],
+  "uncalibrated_reactive_threshold_diagnostic": {
+    "raw_probability_threshold": 0.42,
+    "controller_acceptance_eligible": false,
+    "reason": "0.42 applies after frozen control-risk calibration"
+  },
+  "sealed_test_evaluated": false,
+  "mixed_obstacle_data": null
+}

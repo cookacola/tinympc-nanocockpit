@@ -1,0 +1,154 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.7885210176876613,
+    "validation_task_error": 0.1447414451183717,
+    "validation_collision_probability_mae": 0.09744326803503836,
+    "validation_collision_probability_p95_abs": 0.3781434442572674,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.9260416666666667,
+    "validation_promoted_any_danger_decision_agreement": 0.884765625,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.863671875
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 2,
+    "train_loss": 0.5789881022771199,
+    "validation_task_error": 0.13261510656379255,
+    "validation_collision_probability_mae": 0.09091588781379252,
+    "validation_collision_probability_p95_abs": 0.34756443221020106,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.932421875,
+    "validation_promoted_any_danger_decision_agreement": 0.90078125,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.869921875
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 3,
+    "train_loss": 0.5343962559245882,
+    "validation_task_error": 0.12806684259561896,
+    "validation_collision_probability_mae": 0.08705121759561897,
+    "validation_collision_probability_p95_abs": 0.3483218825318864,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.9359375,
+    "validation_promoted_any_danger_decision_agreement": 0.9,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.8734375
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 4,
+    "train_loss": 0.5038144851866223,
+    "validation_task_error": 0.12958488198133522,
+    "validation_collision_probability_mae": 0.08928540281466854,
+    "validation_collision_probability_p95_abs": 0.3433655673305489,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.9337239583333333,
+    "validation_promoted_any_danger_decision_agreement": 0.905078125,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.868359375
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 5,
+    "train_loss": 0.49074316342671714,
+    "validation_task_error": 0.12233139655897056,
+    "validation_collision_probability_mae": 0.08437566739230389,
+    "validation_collision_probability_p95_abs": 0.3394284223529358,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.9395833333333333,
+    "validation_promoted_any_danger_decision_agreement": 0.90859375,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.878125
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 6,
+    "train_loss": 0.4754764985470545,
+    "validation_task_error": 0.12132364240470453,
+    "validation_collision_probability_mae": 0.08284707990470452,
+    "validation_collision_probability_p95_abs": 0.3262722068506675,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.9375,
+    "validation_promoted_any_danger_decision_agreement": 0.90859375,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.8828125
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 7,
+    "train_loss": 0.4592353779929025,
+    "validation_task_error": 0.153019485830352,
+    "validation_collision_probability_mae": 0.10594917333035198,
+    "validation_collision_probability_p95_abs": 0.3802851009910351,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.922265625,
+    "validation_promoted_any_danger_decision_agreement": 0.889453125,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.84453125
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  },
+  {
+    "epoch": 8,
+    "train_loss": 0.451783375512986,
+    "validation_task_error": 0.12815946661268296,
+    "validation_collision_probability_mae": 0.08792509161268297,
+    "validation_collision_probability_p95_abs": 0.35606003813050324,
+    "validation_affordance_probability_mae": null,
+    "validation_visibility_probability_mae": null,
+    "validation_promoted_sector_decision_agreement": 0.93671875,
+    "validation_promoted_any_danger_decision_agreement": 0.90234375,
+    "validation_uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "reason": "0.42 applies after frozen control-risk calibration",
+      "raw_probability_threshold": 0.42,
+      "raw_decision_agreement": 0.87734375
+    },
+    "global_task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "collision_decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2"
+  }
+]

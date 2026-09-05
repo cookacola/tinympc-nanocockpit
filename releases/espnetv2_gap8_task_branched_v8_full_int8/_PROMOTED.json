@@ -1,0 +1,5 @@
+{
+  "format": "immutable-promotion-completion-seal-v1",
+  "manifest_sha256": "5832b10ce2c612bd9f656ea57d2c590c9cd5763f0c48155f7f7ce500f4004740",
+  "strict_quality_gate_override": true
+}

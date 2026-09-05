@@ -1,0 +1,198 @@
+{
+  "bundle": "/home/cchen/tinympc-nanocockpit/releases/espnetv2_gap8_task_branched_v8_full_int8",
+  "onnxruntime_version": "1.22.0",
+  "input_source": "/home/cchen/tinympc-nanocockpit/releases/espnetv2_gap8_task_branched_v8_full_int8/integer_symw8_gw7/encoder/input.txt",
+  "input_source_sha256": "2fd165369b654d624a02fafc916531156436df38cbd5e957720b1be63d3f091e",
+  "input_shape_hwc": [
+    160,
+    160,
+    3
+  ],
+  "input_bytes": 76800,
+  "input_crc32": "95d5283f",
+  "source_encoder_golden_exact_match": true,
+  "output_bytes": 1608,
+  "output_crc32": "ccc00b83",
+  "packing": [
+    {
+      "name": "corners_hwc",
+      "offset": 0,
+      "bytes": 1600,
+      "shape": [
+        20,
+        20,
+        4
+      ],
+      "crc32": "e4cb7175"
+    },
+    {
+      "name": "gate",
+      "offset": 1600,
+      "bytes": 5,
+      "values": [
+        77,
+        135,
+        73,
+        85,
+        177
+      ],
+      "crc32": "122e7923"
+    },
+    {
+      "name": "collision",
+      "offset": 1605,
+      "bytes": 3,
+      "values": [
+        87,
+        124,
+        115
+      ],
+      "crc32": "dc34f75b"
+    }
+  ],
+  "models": {
+    "encoder": {
+      "path": "integer_symw8_gw7/encoder/encoder_int.onnx",
+      "sha256": "abd3f71a2674b83c0e73a4b9ceaa24b5c908014140c4bb87810a8652aff41117",
+      "input_shape": [
+        1,
+        3,
+        160,
+        160
+      ],
+      "output_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "output_min": 0,
+      "output_max": 255,
+      "output_hwc_crc32": "f60427cc"
+    },
+    "global_head": {
+      "path": "integer_symw8_gw7/global_head/global_head_int.onnx",
+      "sha256": "5f5a1f2d72750ebd537651bf7faf98f21d8c055b2472670341305060bd86e89d",
+      "input_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "output_shape": [
+        1,
+        3,
+        1,
+        1
+      ],
+      "output_min": 87,
+      "output_max": 124,
+      "output_hwc_crc32": "dc34f75b"
+    },
+    "gate_encoder": {
+      "path": "integer_gate_symw8_gw7_cw7/gate_encoder/gate_encoder_int.onnx",
+      "sha256": "f767698f3bdd4976745613fdaa90e5950fa125b56d25d18383da7d48567e896c",
+      "input_shape": [
+        1,
+        3,
+        160,
+        160
+      ],
+      "output_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "output_min": 0,
+      "output_max": 226,
+      "output_hwc_crc32": "1bfd3e69"
+    },
+    "corner_head": {
+      "path": "integer_gate_symw8_gw7_cw7/corner_head/corner_head_int.onnx",
+      "sha256": "1987926e83d79f2700a6af463535d7441c8ab1dd959c170a26a7a160545e4e74",
+      "input_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "output_shape": [
+        1,
+        4,
+        20,
+        20
+      ],
+      "output_min": 0,
+      "output_max": 251,
+      "output_hwc_crc32": "e4cb7175"
+    },
+    "gate_head": {
+      "path": "integer_gate_symw8_gw7_cw7/gate_head/gate_head_int.onnx",
+      "sha256": "9c3f787fe01fa80bdd48ad1d8e5045d565054dc6e21842798960c229c54265c8",
+      "input_shape": [
+        1,
+        32,
+        40,
+        40
+      ],
+      "output_shape": [
+        1,
+        5,
+        1,
+        1
+      ],
+      "output_min": 73,
+      "output_max": 177,
+      "output_hwc_crc32": "122e7923"
+    }
+  },
+  "gvsoc": {
+    "log": "/home/cchen/tinympc-nanocockpit/releases/espnet-task-branched-validation/gvsoc-parity.log",
+    "output_crc32_matches": true,
+    "matching_lines": 1
+  },
+  "host_decoder": {
+    "passed": true,
+    "max_absolute_error": 6.426315778185199e-06,
+    "collision": [
+      0.136824161,
+      0.147222146,
+      0.293052286
+    ],
+    "affordance": [
+      0.196095109,
+      0.771141469,
+      0.0327634141
+    ],
+    "visibility": [
+      0.158225656,
+      0.857412994
+    ],
+    "corners": [
+      [
+        41.8421021,
+        50.2105255
+      ],
+      [
+        33.4736824,
+        58.5789452
+      ],
+      [
+        41.8421021,
+        83.6842041
+      ],
+      [
+        33.4736824,
+        83.6842041
+      ]
+    ],
+    "visible": [
+      0,
+      1
+    ],
+    "reference": "uint8*output_epsilon-output_offset+learned_bias-teacher_logit_offset; NumPy sigmoid, softmax and HWC argmax",
+    "decoder_sha256": "6a8f86d0c96bf722213a78a2571378c72a4ea51f5521d751823dd59eaa546999",
+    "output_header_sha256": "4c0fdfdf85ba1b93bc108a1f3aca9c12e44a405469d0efc1394aece5dba2c4c6"
+  }
+}

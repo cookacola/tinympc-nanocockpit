@@ -1,0 +1,7 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.00902603606848667,
+    "validation_feature_mae": 0.3634088635444641
+  }
+]

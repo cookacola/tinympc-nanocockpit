@@ -1,0 +1,33 @@
+{
+  "status": "built_for_perception_bringup",
+  "hardware_flashed": false,
+  "model": "espnetv2_gap8_task_branched_v8_full_int8",
+  "validation": {
+    "copied_release_hashes": 384,
+    "packaged_file_hashes": 158,
+    "integrated_gvsoc_onnx_output_crc32": "ccc00b83",
+    "fixture_output_bytes": 1608,
+    "host_decoder": "passed",
+    "gvsoc_startup_allocations": "passed",
+    "board_build_and_image": "passed"
+  },
+  "artifacts": {
+    "src/gap/examples/espnet-task-branched/BUILD/GAP8_V2/GCC_RISCV/espnet_task_branched": {
+      "bytes": 1749624,
+      "sha256": "d3d691dc50d02a6adb0e038402ea90c6f82be9331c7f107a4f7dcf5aa0fef627"
+    },
+    "src/gap/examples/espnet-task-branched/BUILD/GAP8_V2/GCC_RISCV/target.board.devices.flash.img": {
+      "bytes": 1059472,
+      "sha256": "d766f0ed71d38dcee26b1a51eb57e4dbf23dfcf3799c87849a471cb7f7ddabc9"
+    },
+    "src/gap/examples/espnet-task-branched/BUILD/GAP8_V2/GCC_RISCV/target.board.devices.flash.readfs.img": {
+      "bytes": 797328,
+      "sha256": "c9d7dfc4852b114225814e9774d0efb88fdae09427ff33bb3f41376afdc379db"
+    }
+  },
+  "limitations": [
+    "No physical camera/AI-deck or flight validation",
+    "No STM32 control output",
+    "Original collision accuracy-parity quality override preserved"
+  ]
+}

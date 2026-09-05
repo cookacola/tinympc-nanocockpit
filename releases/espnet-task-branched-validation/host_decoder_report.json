@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "max_absolute_error": 6.426315778185199e-06,
+  "collision": [
+    0.136824161,
+    0.147222146,
+    0.293052286
+  ],
+  "affordance": [
+    0.196095109,
+    0.771141469,
+    0.0327634141
+  ],
+  "visibility": [
+    0.158225656,
+    0.857412994
+  ],
+  "corners": [
+    [
+      41.8421021,
+      50.2105255
+    ],
+    [
+      33.4736824,
+      58.5789452
+    ],
+    [
+      41.8421021,
+      83.6842041
+    ],
+    [
+      33.4736824,
+      83.6842041
+    ]
+  ],
+  "visible": [
+    0,
+    1
+  ],
+  "reference": "uint8*output_epsilon-output_offset+learned_bias-teacher_logit_offset; NumPy sigmoid, softmax and HWC argmax",
+  "decoder_sha256": "6a8f86d0c96bf722213a78a2571378c72a4ea51f5521d751823dd59eaa546999",
+  "output_header_sha256": "4c0fdfdf85ba1b93bc108a1f3aca9c12e44a405469d0efc1394aece5dba2c4c6"
+}

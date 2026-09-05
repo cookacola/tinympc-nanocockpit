@@ -1,0 +1,218 @@
+{
+  "architecture": "v8_task_branched",
+  "exact_int8_vs_float_student": {
+    "collision_probability_mae": 0.08931443150550925,
+    "collision_probability_max_abs": 0.8973302820426777,
+    "collision_probability_p95_abs": 0.34484486297269096,
+    "decision_abi": "espnetv2_collision_promoted_roll_v3_raw_with_reactive_diagnostic_v2",
+    "format": "espnetv2-gap8-collision-task-parity-v1",
+    "promoted_all_sectors_decision_agreement": 0.8267021276595745,
+    "promoted_any_danger_decision_agreement": 0.8945744680851064,
+    "promoted_any_danger_false_negative": 1529,
+    "promoted_any_danger_false_positive": 1444,
+    "promoted_any_danger_precision": 0.8121748178980229,
+    "promoted_any_danger_recall": 0.8032934516917535,
+    "promoted_any_danger_true_negative": 18983,
+    "promoted_any_danger_true_positive": 6244,
+    "promoted_sector_decision_agreement": 0.928451536643026,
+    "promoted_sector_thresholds": [
+      0.6197193861,
+      0.5278742313,
+      0.6485541463
+    ],
+    "samples": 28200,
+    "task_decode_abi": "espnetv2_gap8_global_task_logits_offset_v1",
+    "uncalibrated_reactive_threshold_diagnostic": {
+      "controller_acceptance_eligible": false,
+      "raw_decision_agreement": 0.8736524822695035,
+      "raw_probability_threshold": 0.42,
+      "reason": "0.42 applies after frozen control-risk calibration"
+    }
+  },
+  "exact_int8_vs_labels": {
+    "any_danger": {
+      "accuracy": 0.8321631205673758,
+      "balanced_accuracy": 0.7888953377291323,
+      "f1": 0.6892929823409703,
+      "fn": 2295,
+      "fp": 2438,
+      "positive_labels": 7545,
+      "precision": 0.6828824141519251,
+      "recall": 0.6958250497017893,
+      "tn": 18217,
+      "tp": 5250
+    },
+    "center": {
+      "accuracy": 0.8650354609929078,
+      "average_precision": 0.7741126347159786,
+      "balanced_accuracy": 0.8210820500169156,
+      "brier": 0.09917310625314713,
+      "f1": 0.6952274183215886,
+      "fn": 1476,
+      "fp": 2330,
+      "positive_labels": 5817,
+      "precision": 0.650727027432169,
+      "recall": 0.7462609592573491,
+      "roc_auc": 0.9125478311912028,
+      "tn": 20053,
+      "tp": 4341
+    },
+    "left": {
+      "accuracy": 0.8828014184397163,
+      "average_precision": 0.6953732305392077,
+      "balanced_accuracy": 0.7741649010996806,
+      "brier": 0.09879608452320099,
+      "f1": 0.6367732717881085,
+      "fn": 1849,
+      "fp": 1456,
+      "positive_labels": 4746,
+      "precision": 0.6655180335400873,
+      "recall": 0.610408765276022,
+      "roc_auc": 0.881769983194368,
+      "tn": 21998,
+      "tp": 2897
+    },
+    "right": {
+      "accuracy": 0.9006382978723404,
+      "average_precision": 0.6987523699497622,
+      "balanced_accuracy": 0.7727315037598518,
+      "brier": 0.0891718715429306,
+      "f1": 0.6395677900694622,
+      "fn": 1725,
+      "fp": 1077,
+      "positive_labels": 4211,
+      "precision": 0.6977266348582655,
+      "recall": 0.5903585846592259,
+      "roc_auc": 0.8895569309209728,
+      "tn": 22912,
+      "tp": 2486
+    }
+  },
+  "float_student_vs_labels": {
+    "any_danger": {
+      "accuracy": 0.8633333333333333,
+      "balanced_accuracy": 0.830447284821692,
+      "f1": 0.7484005744875311,
+      "fn": 1813,
+      "fp": 2041,
+      "positive_labels": 7545,
+      "precision": 0.7374244178566834,
+      "recall": 0.7597084161696488,
+      "tn": 18614,
+      "tp": 5732
+    },
+    "center": {
+      "accuracy": 0.8952127659574468,
+      "average_precision": 0.8442048916549432,
+      "balanced_accuracy": 0.8588589033842982,
+      "brier": 0.08027350902557373,
+      "f1": 0.7583217469534637,
+      "fn": 1181,
+      "fp": 1774,
+      "positive_labels": 5817,
+      "precision": 0.7232449297971919,
+      "recall": 0.7969743854220388,
+      "roc_auc": 0.9378085164971196,
+      "tn": 20609,
+      "tp": 4636
+    },
+    "left": {
+      "accuracy": 0.8960283687943262,
+      "average_precision": 0.7569083887289786,
+      "balanced_accuracy": 0.8152258551235725,
+      "brier": 0.09195064008235931,
+      "f1": 0.6918225772545723,
+      "fn": 1455,
+      "fp": 1477,
+      "positive_labels": 4746,
+      "precision": 0.6902265100671141,
+      "recall": 0.6934260429835651,
+      "roc_auc": 0.9037857940789569,
+      "tn": 21977,
+      "tp": 3291
+    },
+    "right": {
+      "accuracy": 0.917695035460993,
+      "average_precision": 0.7740937880661375,
+      "balanced_accuracy": 0.8026293645095528,
+      "brier": 0.0738646537065506,
+      "f1": 0.6985322769190804,
+      "fn": 1522,
+      "fp": 799,
+      "positive_labels": 4211,
+      "precision": 0.7709288990825688,
+      "recall": 0.6385656613630967,
+      "roc_auc": 0.915151747844058,
+      "tn": 23190,
+      "tp": 2689
+    }
+  },
+  "format": "espnetv2-gap8-original-obstacle-validation-v1",
+  "index": "/home/cchen/drone_rl/outputs/espnetv2_imav22/roll_robust_v3_20260831/index.jsonl",
+  "index_header": {
+    "counts": {
+      "test": 28200,
+      "train": 169200,
+      "validation": 28200
+    },
+    "dataset": "/home/cchen/drone_rl/outputs/imav22_espnet_dataset_v2_20260830",
+    "dataset_manifest_sha256": "2bd010bf3d4e38d027017b428c6df343c7a53f27e5540bed5681c57b575d818f",
+    "format": "two-frame-espnetv2-lite-sector-collision-v1",
+    "index_format": "two-frame-espnetv2-lite-sector-collision-index-v2",
+    "label": {
+      "approaching_only": true,
+      "collision_horizon_s": 1.0,
+      "image_columns": [
+        [
+          0,
+          7
+        ],
+        [
+          7,
+          13
+        ],
+        [
+          13,
+          20
+        ]
+      ],
+      "outputs": [
+        "left",
+        "center",
+        "right"
+      ],
+      "spatial_quantile": 0.9
+    },
+    "positive_counts": {
+      "test": [
+        4132,
+        5784,
+        4577
+      ],
+      "train": [
+        19671,
+        24616,
+        18694
+      ],
+      "validation": [
+        4746,
+        5817,
+        4211
+      ]
+    },
+    "split_unit": "layout"
+  },
+  "quantization": {
+    "activations": "uint8",
+    "encoder": "symmetric_w8",
+    "global_head": "asymmetric_w7"
+  },
+  "samples": 28200,
+  "sector_thresholds": [
+    0.6197193861,
+    0.5278742313,
+    0.6485541463
+  ],
+  "split": "validation",
+  "test_split_evaluated": false
+}

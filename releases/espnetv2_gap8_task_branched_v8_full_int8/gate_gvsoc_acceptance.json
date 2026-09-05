@@ -1,0 +1,137 @@
+{
+  "architecture": "v8_task_branched",
+  "bridge_manifest_sha256": "6e7c802e238e617c329010d9caef895189e72cd29baae4c08a67baa12530e5ed",
+  "cluster_cores": 8,
+  "firmware_v4_action_packet_changed": false,
+  "format": "espnetv2-gap8-task-branched-gate-acceptance-v1",
+  "frozen_gate_section": "gate_int8_vs_float_student",
+  "frozen_gate_thresholds": {
+    "affordance_argmax_agreement_min": 0.97,
+    "affordance_probability_mae_max": 0.06,
+    "corner_peak_mean_heatmap_px_max": 1.0,
+    "corner_peak_p95_heatmap_px_max": 5.0,
+    "visibility_probability_mae_max": 0.08,
+    "visibility_threshold_agreement_min": 0.92
+  },
+  "gate_output_abi": {
+    "affordance_order": [
+      "none",
+      "opening_left",
+      "opening_right"
+    ],
+    "corner_order": [
+      "left_top",
+      "right_top",
+      "left_bottom",
+      "right_bottom"
+    ],
+    "visibility_order": [
+      "left_rail",
+      "right_rail"
+    ]
+  },
+  "integer_float_parity_checks": {
+    "affordance_argmax_agreement": true,
+    "affordance_probability_mae": true,
+    "corner_peak_mean_heatmap_px": true,
+    "corner_peak_p95_heatmap_px": true,
+    "visibility_probability_mae": true,
+    "visibility_threshold_agreement": true
+  },
+  "integer_float_parity_metrics": {
+    "affordance_argmax_agreement": 0.9907142857142858,
+    "affordance_probability_mae": 0.020271476358175278,
+    "corner_peak_mean_heatmap_px": 0.3559711554771231,
+    "corner_peak_p95_heatmap_px": 1.4142135623730951,
+    "visibility_probability_mae": 0.032905787229537964,
+    "visibility_threshold_agreement": 0.985
+  },
+  "nemo_report_sha256": "c0c2eb7bc211bb5ead602b88bac1e7fe0dd487ebaddb5d67eae17890ca4bbcde",
+  "parity_target": "float_student_gate_branch",
+  "partition_acceptance_checks": {
+    "corner_head": true,
+    "gate_encoder": true,
+    "gate_head": true
+  },
+  "partition_weight_quantization": {
+    "corner_head": {
+      "signed_range_policy": "reject_pre_onnx_never_clip",
+      "signed_storage": "int8",
+      "signed_weight_bits": 7,
+      "weight_quantization": "asymmetric"
+    },
+    "gate_encoder": {
+      "signed_range_policy": "reject_pre_onnx_never_clip",
+      "signed_storage": "int8",
+      "signed_weight_bits": 8,
+      "weight_quantization": "symmetric"
+    },
+    "gate_head": {
+      "signed_range_policy": "reject_pre_onnx_never_clip",
+      "signed_storage": "int8",
+      "signed_weight_bits": 7,
+      "weight_quantization": "asymmetric"
+    }
+  },
+  "partitions": {
+    "corner_head": {
+      "activation_checksums_loaded": true,
+      "dory_nodes": 5,
+      "golden_activation_files": 5,
+      "gvsoc_checksum_layers": 5,
+      "gvsoc_cycles": 4143558,
+      "gvsoc_log_sha256": "abac61a30b5732c5f254cee263e977aee6a4802a9275707dfc7e036b7ed6d2ce",
+      "macs": 51712000,
+      "max_l1_tile_bytes": 32032,
+      "output_bytes": 1600,
+      "pulp_nn_convolution_bias_abi_bits": 32,
+      "qat_checkpoint_sha256": "8005041a4f884dd5d10ea9f365f59919f81fbc502cebd9db93feee4f6dfe300a"
+    },
+    "gate_encoder": {
+      "activation_checksums_loaded": true,
+      "dory_nodes": 11,
+      "golden_activation_files": 11,
+      "gvsoc_checksum_layers": 11,
+      "gvsoc_cycles": 4976448,
+      "gvsoc_log_sha256": "a3ccf5024edb7909671635a75f94f461ed497db41237da4442b7dd6ac52be7fe",
+      "macs": 10572800,
+      "max_l1_tile_bytes": 36352,
+      "output_bytes": 51200,
+      "pulp_nn_convolution_bias_abi_bits": 32,
+      "qat_checkpoint_sha256": "860ad1b178289e93e4f93aae7a5415dde3196bef5e9239e802285bed39ce97f6"
+    },
+    "gate_head": {
+      "activation_checksums_loaded": true,
+      "dory_nodes": 7,
+      "golden_activation_files": 7,
+      "gvsoc_checksum_layers": 7,
+      "gvsoc_cycles": 4022556,
+      "gvsoc_log_sha256": "d4e92b4742fad34da6adc21d87e2d2de9373aea4c08507a21bbcff96e916c8af",
+      "macs": 37786080,
+      "max_l1_tile_bytes": 32032,
+      "output_bytes": 5,
+      "pulp_nn_convolution_bias_abi_bits": 32,
+      "qat_checkpoint_sha256": "0ffd130c5770e109703bba71ce1640df6eec3b8dd38240c27e4088f0db62df4f"
+    }
+  },
+  "passed": true,
+  "physical_gap8_evaluated": false,
+  "scope": "gate_encoder_gate_head_and_corner_head_only",
+  "sealed_test_evaluated": false,
+  "task_label_benchmark_evaluated": false,
+  "timing": {
+    "clock_hz": 175000000,
+    "cycles_by_partition": {
+      "corner_head": 4143558,
+      "gate_encoder": 4976448,
+      "gate_head": 4022556
+    },
+    "latency_ms": 75.10035428571429,
+    "maximum_sustainable_hz": 13.31551641148811,
+    "maximum_total_cycles": 35000000,
+    "minimum_required_hz": 5.0,
+    "passed": true,
+    "total_cycles": 13142562
+  },
+  "tiny_mpc_u0_boundary_changed": false
+}

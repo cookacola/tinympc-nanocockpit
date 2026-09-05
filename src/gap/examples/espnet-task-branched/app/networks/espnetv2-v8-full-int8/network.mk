@@ -1,0 +1,46 @@
+# Five-partition ESPNet v8; no legacy map ABI.
+CORE ?= 8
+FLASH_TYPE ?= HYPERFLASH
+RAM_TYPE ?= HYPERRAM
+APP_SRCS += $(wildcard $(NETWORK_DIR)/src/*.c)
+APP_CFLAGS += -I$(NETWORK_DIR)/inc -DNUM_CORES=$(CORE)
+APP_CFLAGS += -Wno-error -O2 -fno-indirect-inlining -flto
+APP_LDFLAGS += -lm -flto
+APP_CFLAGS += -DGAP_SDK=1 -DFLASH_TYPE=$(FLASH_TYPE)
+APP_CFLAGS += -DUSE_$(FLASH_TYPE) -DUSE_$(RAM_TYPE)
+APP_CFLAGS += -DALWAYS_BLOCK_DMA_TRANSFERS -DFS_READ_FS
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_corner_head_ReluConvolution0_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_corner_head_ReluConvolution1_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_corner_head_ReluConvolution2_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_corner_head_ReluConvolution3_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_corner_head_ReluConvolution4_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution0_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution1_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution2_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution3_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution4_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution5_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution6_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution8_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_encoder_BNReluConvolution9_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution0_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution1_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution2_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution3_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution4_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution5_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution6_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution8_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_encoder_BNReluConvolution9_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution0_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution1_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution2_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution3_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution4_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_gate_head_ReluConvolution6_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution0_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution1_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution2_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution3_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution4_weights.hex
+READFS_FILES += $(NETWORK_DIR)/hex/espnet_global_head_ReluConvolution6_weights.hex

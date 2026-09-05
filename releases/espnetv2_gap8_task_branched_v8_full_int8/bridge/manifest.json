@@ -1,0 +1,53 @@
+{
+  "architecture": "v8_task_branched",
+  "branch_point": "after_shared_stem_16x80x80",
+  "checkpoint": "/home/cchen/drone_rl/outputs/espnetv2_imav22_gate_rail/gap8_obstacle_gate_branched_v8/best.pt",
+  "checkpoint_sha256": "ee6453ba47c637dfb1840ac2d6105b222972a70c4bbf841cd1b1aae972c22c8f",
+  "corner_output_order": [
+    "left_top",
+    "right_top",
+    "left_bottom",
+    "right_bottom"
+  ],
+  "decode": "float_logits=uint8_output*partition_epsilon-channel_offset",
+  "deployment_format": "espnetv2-roll-robust-gap8-student-v8-task-branched",
+  "feature_shape_chw": [
+    32,
+    40,
+    40
+  ],
+  "format": "espnetv2-gap8-python37-bridge-v1",
+  "gate_output_order": [
+    "affordance_none",
+    "affordance_opening_left",
+    "affordance_opening_right",
+    "visibility_left_rail",
+    "visibility_right_rail"
+  ],
+  "global_output_order": [
+    "collision_left",
+    "collision_center",
+    "collision_right"
+  ],
+  "input_preprocess": "signed_difference_u8=(current_u8-previous_u8+255)//2",
+  "input_shape_chw": [
+    3,
+    160,
+    160
+  ],
+  "obstacle_training_freezes_gate_path": true,
+  "partition_roles": {
+    "corner_head": "gate_corner_head",
+    "encoder": "collision_encoder",
+    "gate_encoder": "gate_encoder",
+    "gate_head": "affordance_visibility_head",
+    "global_head": "collision_head"
+  },
+  "partitions": [
+    "encoder",
+    "global_head",
+    "gate_encoder",
+    "gate_head",
+    "corner_head"
+  ]
+}

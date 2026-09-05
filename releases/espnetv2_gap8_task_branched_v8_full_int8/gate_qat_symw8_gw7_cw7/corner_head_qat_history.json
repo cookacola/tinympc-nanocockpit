@@ -1,0 +1,122 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 137.56097455705915,
+    "validation_task_error": 0.04687277227640152,
+    "validation_soft_coordinate_error": 0.0378093495965004,
+    "validation_peak_error_heatmap_px": 0.46519152633845806,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 2,
+    "train_loss": 112.6582787649972,
+    "validation_task_error": 0.04809613674879074,
+    "validation_soft_coordinate_error": 0.039640605449676514,
+    "validation_peak_error_heatmap_px": 0.48495606519281864,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 3,
+    "train_loss": 105.77953040713356,
+    "validation_task_error": 0.0498297993093729,
+    "validation_soft_coordinate_error": 0.04115340858697891,
+    "validation_peak_error_heatmap_px": 0.5150213278830051,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 4,
+    "train_loss": 100.49122343517485,
+    "validation_task_error": 0.0357110008597374,
+    "validation_soft_coordinate_error": 0.04150024801492691,
+    "validation_peak_error_heatmap_px": 0.34965854324400425,
+    "validation_peak_p95_error_heatmap_px": 1.0000000074505806,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 5,
+    "train_loss": 96.62367597307478,
+    "validation_task_error": 0.038434174470601976,
+    "validation_soft_coordinate_error": 0.04230950400233269,
+    "validation_peak_error_heatmap_px": 0.39468358643352985,
+    "validation_peak_p95_error_heatmap_px": 1.0207106836139026,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 6,
+    "train_loss": 93.31258065359933,
+    "validation_task_error": 0.03604608103632927,
+    "validation_soft_coordinate_error": 0.04313838481903076,
+    "validation_peak_error_heatmap_px": 0.3529126066714525,
+    "validation_peak_p95_error_heatmap_px": 1.0000000074505806,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 7,
+    "train_loss": 91.13335876464843,
+    "validation_task_error": 0.04315230026841164,
+    "validation_soft_coordinate_error": 0.04237506166100502,
+    "validation_peak_error_heatmap_px": 0.3858277052640915,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 8,
+    "train_loss": 88.8261932373047,
+    "validation_task_error": 0.04072013907134533,
+    "validation_soft_coordinate_error": 0.04392484575510025,
+    "validation_peak_error_heatmap_px": 0.3366720527410507,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 9,
+    "train_loss": 87.0135716756185,
+    "validation_task_error": 0.03759597595780939,
+    "validation_soft_coordinate_error": 0.04286735877394676,
+    "validation_peak_error_heatmap_px": 0.37769789062440395,
+    "validation_peak_p95_error_heatmap_px": 1.0207106836139026,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 10,
+    "train_loss": 84.93752746582031,
+    "validation_task_error": 0.04097420684993267,
+    "validation_soft_coordinate_error": 0.04413527995347977,
+    "validation_peak_error_heatmap_px": 0.3410995155572891,
+    "validation_peak_p95_error_heatmap_px": 1.4142135307192802,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 11,
+    "train_loss": 83.75760672433036,
+    "validation_task_error": 0.03538437820971012,
+    "validation_soft_coordinate_error": 0.044054433703422546,
+    "validation_peak_error_heatmap_px": 0.3385997600853443,
+    "validation_peak_p95_error_heatmap_px": 1.0000000074505806,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  },
+  {
+    "epoch": 12,
+    "train_loss": 82.37599683489118,
+    "validation_task_error": 0.03441115636378378,
+    "validation_soft_coordinate_error": 0.04344446212053299,
+    "validation_peak_error_heatmap_px": 0.3160898219794035,
+    "validation_peak_p95_error_heatmap_px": 1.0207106836139026,
+    "validation_endpoint_count": 2800,
+    "corner_endpoint_masking": true
+  }
+]
