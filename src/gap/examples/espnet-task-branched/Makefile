@@ -46,7 +46,7 @@ APP_CFLAGS += -DTINY_RACER_PARITY_INPUT_FILE=\"$(notdir $(PARITY_INPUT))\"
 READFS_FILES += $(PARITY_INPUT)
 endif
 
-APP_SRCS += main.c espnet_decode.c
+APP_SRCS += main.c espnet_decode.c collision_uart.c
 APP_SRCS += ../../lib/camera.c ../../lib/camera/himax.c ../../lib/cluster.c ../../lib/crc32.c ../../lib/debug.c ../../lib/rng.c ../../lib/soc.c ../../lib/streamer.c ../../lib/time.c ../../lib/trace.c ../../lib/queue.c
 APP_SRCS += ../../lib/cpx/cpx.c ../../lib/cpx/cpx_spi.c
 APP_SRCS += ../../lib/uart.c ../../lib/uart_protocol.c

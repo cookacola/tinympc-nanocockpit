@@ -25,6 +25,7 @@
 #include "config.h"
 #include "camera.h"
 #include "cluster.h"
+#include "collision_uart.h"
 #include "coroutine.h"
 #include "cpx/cpx.h"
 #include "crc32.h"
@@ -85,6 +86,8 @@ static PI_FC_L1 co_fn_ctx_t streamer_rx_ctx;
 
 typedef struct {
     uint32_t stm32_timestamp;
+    uint32_t source_timestamp_ms;
+    bool temporal_valid;
     frame_t *camera_frame;
 } inference_args_t;
 
@@ -210,10 +213,14 @@ CO_FN_BEGIN(camera_callback, frame_t *, camera_frame)
     static PI_FC_L1 co_event_t inference_done;
     static PI_FC_L1 co_event_t streamer_tx_done;
 
+    /* Sample validity before packing initializes the previous frame. */
+    inference_args.temporal_valid = previous_frame_valid;
     copy_network_input(camera_frame);
 
     inference_args = (inference_args_t) {
         .stm32_timestamp = latest_state.timestamp,
+        .source_timestamp_ms = camera_frame->frame_timestamp / 1000u,
+        .temporal_valid = inference_args.temporal_valid,
         .camera_frame = camera_frame,
     };
     co_fn_push_start(&inference_ctx, inference_task, &inference_args,
@@ -239,6 +246,9 @@ CO_FN_END()
 CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
 {
     static PI_FC_L1 co_event_t network_done;
+    static PI_FC_L1 co_event_t collision_tx_done;
+    static PI_FC_L1 uint16_t collision_sequence;
+    static PI_L2 espnet_collision_packet_t collision_packet;
     static PI_FC_L1 float corners[CORNER_COORD_COUNT];
     static PI_FC_L1 espnet_decoded_t decoded;
     static PI_FC_L1 frame_t *camera_frame;
@@ -279,11 +289,12 @@ CO_FN_BEGIN(inference_task, inference_args_t *, inference_args)
         .phi = encode_corner(corners[6], corners[7]),
     };
 
-    /*
-     * UART inference transmission is intentionally disabled during neural
-     * network bring-up. The annotated frame and temporary corner metadata are
-     * sent only through the CPX streamer.
-     */
+    collision_sequence = espnet_collision_next_sequence(collision_sequence);
+    espnet_collision_send_async(&uart, &collision_packet,
+        inference_args->source_timestamp_ms, collision_sequence,
+        decoded.collision, inference_args->temporal_valid,
+        co_event_init(&collision_tx_done));
+    CO_WAIT(&collision_tx_done);
 }
 CO_FN_END()
 

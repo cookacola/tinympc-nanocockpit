@@ -64,6 +64,49 @@ only draws its host-side polygon when all four endpoints are available.
 GAP8 stdout reports collision, affordance, and rail visibility probabilities
 in thousandths (`ESPNET ..._milli=`).
 
+## Collision UART telemetry
+
+After each completed inference, the GAP8 sends one ESPNet collision packet to
+STM32 on the existing UART link. This is sector telemetry, with no control
+command or collision threshold. CPX image and gate-corner streaming continues.
+The dedicated header is hex `90 19 08 43`; it does not reuse oLGMD packets.
+
+All integers are little-endian. The 22-byte packet consists of this header,
+a packed 14-byte payload, and a four-byte CRC32 over header plus payload
+(`crc32CalculateBuffer`, compatible with zlib):
+
+| Payload byte offset | Type | Meaning |
+| --- | --- | --- |
+| 0 | uint32 | GAP8 capture end timestamp in milliseconds |
+| 4 | uint16 | Inference sequence, starts at 1 and wraps 65535 to 1 |
+| 6 | uint16[3] | Left, center, right probability Q15, 0..32768 |
+| 12 | uint8 | Valid: 0 or 1 |
+| 13 | uint8 | Reserved, zero |
+
+Probabilities are decoded with the model's affine calibration and sigmoid,
+then clamped to [0,1] and rounded to Q15. Divide by 32768 to recover probability.
+The first inference duplicates its only captured frame, so its telemetry is
+invalid with zero probabilities. Any nonfinite probability also invalidates
+the whole sample and zeros all three probabilities. All later temporal pairs
+are valid. Source timestamps use `frame_timestamp / 1000`; the underlying
+32-bit microsecond capture clock wraps after about 71.6 minutes. Receiver
+freshness must therefore use local receipt time, not compare these timestamps
+to the STM32 clock.
+
+The packet buffer stays in L2 until UART DMA completion before the camera
+callback resumes streaming or another inference can reuse it. No old oLGMD
+library is linked into this target.
+
+Host protocol regression test (from repository root):
+
+```sh
+cc -std=c11 -Wall -Wextra -Werror \
+  -Isrc/gap/examples/espnet-task-branched -Isrc/gap/lib \
+  src/gap/examples/espnet-task-branched/tests/test_collision_wire.c \
+  src/gap/lib/crc32.c -lm -o /tmp/test_espnet_collision_wire
+/tmp/test_espnet_collision_wire
+```
+
 ## Model and runtime contract
 
 - Input: HWC uint8 `[160,160,3]`, channels previous grayscale, current
@@ -88,8 +131,8 @@ in thousandths (`ESPNET ..._milli=`).
 This is a perception bring-up target. Like the existing Tiny Racer bring-up
 target, it streams perception and does not send control commands to STM32.
 Collision outputs are sector probabilities, not bounding boxes or a dense
-obstacle map. Connecting these outputs to a flight controller requires a
-separately defined controller interface.
+obstacle map. The collision UART packet provides telemetry to STM32 logging;
+connecting these outputs to flight control requires a controller interface.
 
 ## Verification completed
 
