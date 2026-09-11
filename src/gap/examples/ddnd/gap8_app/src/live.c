@@ -24,6 +24,12 @@
 #endif
 #endif
 #include "depthgate_output.h"
+/* UART uDMA reads L2 memory; the FC stack is not a DMA source. */
+#ifdef DDND_RAW_UART
+static PI_L2 uint32_t uart_crc;
+#else
+static PI_L2 DDNDDepthGatePacket compact __attribute__((aligned(4)));
+#endif
 static uint32_t capture_ms, clock_last_us, clock_remainder_us;
 static int8_t *arena;
 static uint8_t *payload;
@@ -68,9 +74,9 @@ static void send_result(void) {
  crc^=0xffffffffu;
  pi_uart_write(&uart,&packet,sizeof(packet));
  for(int k=0;k<DDND_OUTPUT_COUNT;k++)pi_uart_write(&uart,arena+ddnd_output_offsets[k],ddnd_output_bytes[k]);
- pi_uart_write(&uart,&crc,sizeof(crc));
+ uart_crc=crc;
+ pi_uart_write(&uart,&uart_crc,sizeof(uart_crc));
 #else
- DDNDDepthGatePacket compact;
  ddnd_depthgate(&compact,arena+ddnd_output_offsets[0],arena+ddnd_output_offsets[1],
   arena+ddnd_output_offsets[2],ddnd_output_exps[0],ddnd_output_exps[1],ddnd_output_exps[2],
   capture_ms,(uint16_t)packet.sequence,packet.inference_us,packet.flags&1);

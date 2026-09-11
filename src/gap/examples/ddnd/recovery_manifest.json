@@ -4,7 +4,7 @@
   "sha256": {
     ".gitignore": "16659acf33e7c99ac70f04d6afc56261d1ebac144b6d9e2e6892891fd8118e30",
     "DEPLOYMENT_STATUS.md": "75ca0a161118ef55b3adb6c912988bdc482a9d48040d282f2a290ecd83870406",
-    "README.md": "0eaa721d787cd07db6661939b2cfafaa3940869aebb67e064d2954750372fc5e",
+    "README.md": "ff728631b3b32dd240c1451629ee4f7d3549b7f108061a8e000f7d3a2d9a7fc7",
     "evidence/ddnd-final-led-live-verification.log": "239423dcb94d86743e0dced6d86ebaa96aa8bfa39253a3cb4021c07ec34b1fdf",
     "evidence/ddnd-final-led-verified-build.log": "ac1d6819f3ff61519b3833e08996789ef46f89704c66486383979dc573028ab1",
     "evidence/ddnd-recovery-gvsoc.log": "0f24ad2392bf99a401cf7d0cbb2f7ec8b22d8cd5bdf5d710f7728786205db991",
@@ -39,7 +39,7 @@
     "gap8_app/inc/graph.h": "c02b46237c1600babc1f137120a6ddd236649a1c1213e8774766da78012f993f",
     "gap8_app/inc/sdk_compat.h": "6b5b5f42597b26f02ca66728d04957267b6f942085f341076be0091fca250298",
     "gap8_app/manifest.json": "ccbc362a4eb12ddc842214bed6646f4a5907d4a1d99f4f53a9b9130e18714314",
-    "gap8_app/src/live.c": "9a7fcace05398952332f34adfd98db5718392fa4f7fcf22db879e31f3b8c2c82",
+    "gap8_app/src/live.c": "6506772d525e0aac4211d64a539b41ce5849489c38fed612c7069d3e4d22d73c",
     "gap8_app/src/live_himax.c": "3750f934662afdc79309b8fbc410bba3ef5015fe705c5408ceaa65f5acfd8698",
     "gap8_app/src/main.c": "a26a04b41aa8f64ef15489b000a34e09d81e6e846cd63284f3b1758d066dfdc8",
     "hardware_configuration.json": "726f805c26803616ad9a3d2e45c06d4d88e589b2c1cffe87b630775675f5ad7e",
