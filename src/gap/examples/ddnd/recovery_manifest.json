@@ -4,7 +4,7 @@
   "sha256": {
     ".gitignore": "16659acf33e7c99ac70f04d6afc56261d1ebac144b6d9e2e6892891fd8118e30",
     "DEPLOYMENT_STATUS.md": "75ca0a161118ef55b3adb6c912988bdc482a9d48040d282f2a290ecd83870406",
-    "README.md": "ff728631b3b32dd240c1451629ee4f7d3549b7f108061a8e000f7d3a2d9a7fc7",
+    "README.md": "bd96abba336776ecf57476b339902e911862dd29a2f1472d5419c35ad8f142cb",
     "evidence/ddnd-final-led-live-verification.log": "239423dcb94d86743e0dced6d86ebaa96aa8bfa39253a3cb4021c07ec34b1fdf",
     "evidence/ddnd-final-led-verified-build.log": "ac1d6819f3ff61519b3833e08996789ef46f89704c66486383979dc573028ab1",
     "evidence/ddnd-recovery-gvsoc.log": "0f24ad2392bf99a401cf7d0cbb2f7ec8b22d8cd5bdf5d710f7728786205db991",
@@ -112,6 +112,7 @@
     "vendor/live_nanocockpit/lib/uart.h": "3b6e3e0a1a1e4da09b9c2cc1d8a4068248d8b18e0d8a486113c2ef0017fe96a2",
     "vendor/live_nanocockpit/lib/uart_protocol.c": "cc6fe5060329c58d236a7825f618b5778631f737a3692bf998d5521bcecd1102",
     "vendor/live_nanocockpit/lib/uart_protocol.h": "2c18a97e635e370568cb33443091bddc5a2af0f91a1b96f96c18941d5c9a0f3a",
-    "vendor/live_nanocockpit/lib/utils.h": "f2b8cf6f68fa488d16d9bdf8e2e01771bb564b738ffb1ed2e26849aae816ab1f"
+    "vendor/live_nanocockpit/lib/utils.h": "f2b8cf6f68fa488d16d9bdf8e2e01771bb564b738ffb1ed2e26849aae816ab1f",
+    "cold_boot_verification.json": "5dc19cc16cb03862b5d600a183990ea579fb7b961bd65e26e22ec568b681f0a3"
   }
 }
