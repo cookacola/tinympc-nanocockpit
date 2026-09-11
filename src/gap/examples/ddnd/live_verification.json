@@ -1,0 +1,27 @@
+{
+  "status": "flashed_and_resumed_flash_boot_live_verified",
+  "recorded_utc": "2026-09-09T23:23:21.133831+00:00",
+  "release": "/home/cchen/ddnd-gap8-gates-20260908/releases/final-11174-liveled-20260909",
+  "frame_sequences": [
+    2,
+    5,
+    8
+  ],
+  "inference_us": [
+    1452820,
+    1452820,
+    1452545
+  ],
+  "camera_i2c_flags": 1,
+  "activity_led_gpio": "PI_GPIO_A2_PAD_14_A2",
+  "method": "One OpenOCD session: init; resume; three packet memory samples spaced 5 seconds apart; shutdown. No image loaded during observation. Debugger reset/resume is not an untouched power-cycle test.",
+  "physical_power_cycle_independently_verified": false,
+  "uart_host_decoding_verified": false,
+  "model_and_kernels_unchanged": true,
+  "board_init": "150MHz FC/100MHz CL; no voltage change; simplified direct frequency calls without earlier optional voltage code or 100ms waits.",
+  "temporary_diagnostics_removed": true,
+  "stm32_changed": false,
+  "flights_started": false,
+  "evidence": "evidence/ddnd-final-led-live-verification.log",
+  "failure_cause": "Earlier stall and CRC symptoms cleared after JTAG reattachment. No proven stack overlap or callback software defect; do not claim a definitive root cause."
+}

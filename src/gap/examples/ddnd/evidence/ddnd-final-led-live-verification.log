@@ -1,0 +1,28 @@
+Open On-Chip Debugger 0.10.0+dev-dirty (2024-09-16-16:56)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'adapter speed' not 'adapter_khz'
+DEPRECATED! use 'adapter driver' not 'interface'
+Warn : Interface already configured, ignoring
+TARGET create
+Info : core 0 selected
+0
+Info : gap8_adv_debug_itf tap selected
+Info : adv_dbg_unit debug unit selected
+Info : Option 1 is passed to adv_dbg_unit debug unit
+GAP8 INIT TARGET
+Info : clock speed 300 kHz
+Info : JTAG tap: gap8.cpu tap/device found: 0x149511c3 (mfg: 0x0e1 (Wintec Industries), part: 0x4951, ver: 0x1)
+GAP8 examine target
+Init jtag
+Initialising GAP8 JTAG TAP
+Info : adv debug unit is configured with option ADBG_USE_HISPEED
+Info : gdb port disabled
+SAMPLE0
+0 827212868 1 2621441 2 2 3 3598022 4 1452820 5 21444 6 10485888 7 67897864 8 33422332 9 736127263
+SAMPLE1
+0 827212868 1 2621441 2 5 3 8797607 4 1452820 5 21444 6 10485888 7 67897864 8 33422332 9 736127263
+SAMPLE2
+0 827212868 1 2621441 2 8 3 13997192 4 1452545 5 21444 6 10485888 7 67897864 8 33422332 9 736127263
+shutdown command invoked

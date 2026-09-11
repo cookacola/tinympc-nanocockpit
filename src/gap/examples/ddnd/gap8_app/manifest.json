@@ -1,0 +1,36 @@
+{
+  "export": "/home/cchen/ddnd-gap8-gates-20260908/artifacts/final_export",
+  "fixtures": [
+    {
+      "input": "input.bin",
+      "goldens": [
+        "golden_depth_logits.bin",
+        "golden_corners.bin",
+        "golden_visibility.bin"
+      ]
+    },
+    {
+      "input": "input_gate.bin",
+      "goldens": [
+        "golden_gate_depth_logits.bin",
+        "golden_gate_corners.bin",
+        "golden_gate_visibility.bin"
+      ]
+    }
+  ],
+  "arena_bytes": 348160,
+  "max_payload_bytes": 46720,
+  "nodes": 55,
+  "files": {
+    "weights.bin": "2be0691fb77bc2109933e3f0b1ec1fa1f7e5b0b82e15028cd944bbbcaf61aa76",
+    "input.bin": "95e3a16cce332798d329aec0a3afbc9be7e99efad0b8b240635a396c4175eedb",
+    "golden_depth_logits.bin": "ea3dc3051a3a482e26a87b515889816a735f67f7abb25e44bd0e0e86d8d9d719",
+    "golden_corners.bin": "07f7a0edcf31aa2e73bba0ef450759be23f77a228297074d07aa48c5e10841b7",
+    "golden_visibility.bin": "f289a36a691d35374f526e8c488eace50af7d36bb883a98ed013d81030848bc0",
+    "input_gate.bin": "e6c22c4d6afc21ff07c416ea10a193a0c6f98b7640e95f93ee59abf0be384af6",
+    "golden_gate_depth_logits.bin": "e33e3eb33e1a21cb56ffa90ca4a6e803a27ef53a477e02b11d2b2f752bc66ba2",
+    "golden_gate_corners.bin": "d9d3264761b7421817ec0a4df2be7f4a878c513bf1c2520adb99254d7326db0b",
+    "golden_gate_visibility.bin": "cb9ab88826559e74f4090d729e1a623cf1a8f6caac73ef4de75e51c3e9bd2e02"
+  },
+  "integer_outputs": "raw logits, no output activation omitted from mathematical inference; sigmoid performed downstream"
+}

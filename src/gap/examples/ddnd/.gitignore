@@ -1,0 +1,5 @@
+BUILD*/
+*.so
+__pycache__/
+# Preserve historical evidence logs as provenance.
+!evidence/**/*.log

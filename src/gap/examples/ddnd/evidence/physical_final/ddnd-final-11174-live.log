@@ -1,0 +1,126 @@
+rm -f /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/flash.img
+riscv32-unknown-elf-gcc -Iinc -I../runtime -O2 -fno-indirect-inlining -DNUM_CORES=8 -DFS_READ_FS -DDDND_GAP8 -I../vendor/live_nanocockpit/lib -DDDND_TILED -DDDND_LIVE_DEBUG -DCONFIG_AI_DECK -DRT_FC_STACK_SIZE=2048 -D__PLATFORM_BOARD__ -D__RT_IODEV__=2 -fno-jump-tables -fno-tree-loop-distribute-patterns -fdata-sections -ffunction-sections -mchip=gap8 -mPE=8 -mFC=1 -D__riscv__ -D__GAP__ -D__GAP8__ -DCHIP_VERSION=2 -mnativeomp -D__pulp__ -DCONFIG_GAP -D__PULP_OS__ -MMD -MP -c src/live.c  -I/gap_sdk/install/GAP8_V2/include  -I/gap_sdk/install/GAP8_V2/include/io  -I/gap_sdk/install/workstation/include  -I/gap_sdk/tools/autotiler_v3/Emulation  -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h -MD -MF /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live.d -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live.o
+riscv32-unknown-elf-gcc -Iinc -I../runtime -O2 -fno-indirect-inlining -DNUM_CORES=8 -DFS_READ_FS -DDDND_GAP8 -I../vendor/live_nanocockpit/lib -DDDND_TILED -DDDND_LIVE_DEBUG -DCONFIG_AI_DECK -DRT_FC_STACK_SIZE=2048 -D__PLATFORM_BOARD__ -D__RT_IODEV__=2 -fno-jump-tables -fno-tree-loop-distribute-patterns -fdata-sections -ffunction-sections -mchip=gap8 -mPE=8 -mFC=1 -D__riscv__ -D__GAP__ -D__GAP8__ -DCHIP_VERSION=2 -mnativeomp -D__pulp__ -DCONFIG_GAP -D__PULP_OS__ -MMD -MP -c ../runtime/ddnd_runtime.c  -I/gap_sdk/install/GAP8_V2/include  -I/gap_sdk/install/GAP8_V2/include/io  -I/gap_sdk/install/workstation/include  -I/gap_sdk/tools/autotiler_v3/Emulation  -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h -MD -MF /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/../runtime/ddnd_runtime.d -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/../runtime/ddnd_runtime.o
+riscv32-unknown-elf-gcc -Iinc -I../runtime -O2 -fno-indirect-inlining -DNUM_CORES=8 -DFS_READ_FS -DDDND_GAP8 -I../vendor/live_nanocockpit/lib -DDDND_TILED -DDDND_LIVE_DEBUG -DCONFIG_AI_DECK -DRT_FC_STACK_SIZE=2048 -D__PLATFORM_BOARD__ -D__RT_IODEV__=2 -fno-jump-tables -fno-tree-loop-distribute-patterns -fdata-sections -ffunction-sections -mchip=gap8 -mPE=8 -mFC=1 -D__riscv__ -D__GAP__ -D__GAP8__ -DCHIP_VERSION=2 -mnativeomp -D__pulp__ -DCONFIG_GAP -D__PULP_OS__ -MMD -MP -c src/live_himax.c  -I/gap_sdk/install/GAP8_V2/include  -I/gap_sdk/install/GAP8_V2/include/io  -I/gap_sdk/install/workstation/include  -I/gap_sdk/tools/autotiler_v3/Emulation  -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h -MD -MF /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live_himax.d -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live_himax.o
+riscv32-unknown-elf-gcc -Iinc -I../runtime -O2 -fno-indirect-inlining -DNUM_CORES=8 -DFS_READ_FS -DDDND_GAP8 -I../vendor/live_nanocockpit/lib -DDDND_TILED -DDDND_LIVE_DEBUG -DCONFIG_AI_DECK -DRT_FC_STACK_SIZE=2048 -D__PLATFORM_BOARD__ -D__RT_IODEV__=2 -fno-jump-tables -fno-tree-loop-distribute-patterns -fdata-sections -ffunction-sections -mchip=gap8 -mPE=8 -mFC=1 -D__riscv__ -D__GAP__ -D__GAP8__ -DCHIP_VERSION=2 -mnativeomp -D__pulp__ -DCONFIG_GAP -D__PULP_OS__ -MMD -MP -c /gap_sdk/rtos/pulp/pulp-os/kernel/conf.c  -I/gap_sdk/install/GAP8_V2/include  -I/gap_sdk/install/GAP8_V2/include/io  -I/gap_sdk/install/workstation/include  -I/gap_sdk/tools/autotiler_v3/Emulation  -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h -MD -MF /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/pulp-os/conf.d -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/pulp-os/conf.o
+riscv32-unknown-elf-gcc -march=rv32imcxgap8 -mPE=8 -mFC=1 -MMD -MP -Wl,--gc-sections   -I/gap_sdk/install/GAP8_V2/include  -I/gap_sdk/install/GAP8_V2/include/io  -I/gap_sdk/install/workstation/include  -I/gap_sdk/tools/autotiler_v3/Emulation  -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live  /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live.o  /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/../runtime/ddnd_runtime.o  /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/src/live_himax.o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/pulp-os/conf.o -lm -Wl,--print-memory-usage  -L/gap_sdk/install/GAP8_V2/lib/gap/ai_deck -lpibsp -L/gap_sdk/install/GAP8_V2/lib/gap -lrt -lrtio -lrt -lgcc -T/gap_sdk/install/workstation/ld/link.gap8_rev1.ld -T/gap_sdk/install/workstation/ld/gapuino.conf.ld  -nostartfiles -nostdlib -include /gap_sdk/install/GAP8_V2/include/rt/chips/gap_rev1/config.h
+Memory region         Used Size  Region Size  %age Used
+              L2:       50912 B       512 KB      9.71%
+         fc_tcdm:        5148 B      16380 B     31.43%
+ fc_tcdm_aliased:         992 B      16380 B      6.06%
+              L1:          28 B      65532 B      0.04%
+      L1_aliased:          24 B      65532 B      0.04%
+riscv32-unknown-elf-objdump -d -h -S -t -w --show-raw-insn /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live > /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live.s
+riscv32-unknown-elf-size -B -x --common /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live > /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live.size
+riscv32-unknown-elf-nm -a -A -l -S --size-sort --special-syms /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live >> /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live.size
+gapy --target=ai_deck --platform=board --work-dir=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV  --config-opt=flash/content/partitions/readfs/files=hex/weights.bin   run --image --binary=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live 
+gapy --target=ai_deck --platform=board --work-dir=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV  --config-opt=flash/content/partitions/readfs/files=hex/weights.bin   run --flash --binary=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live 
+Flashing image with command:
+gap8-openocd -c "gdb_port disabled; telnet_port disabled; tcl_port disabled" -c "script interface/ftdi/olimex-arm-usb-tiny-h.cfg; script target/gap8revb.tcl; script tcl/flash_image.tcl; script tcl/jtag_boot.tcl; gap_flash_raw_hyper /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/target.board.devices.flash.img 503052 /gap_sdk/tools/gap8-openocd-tools; exit;"
+Open On-Chip Debugger 0.10.0+dev-dirty (2024-09-16-16:56)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'adapter speed' not 'adapter_khz'
+DEPRECATED! use 'adapter driver' not 'interface'
+Warn : Interface already configured, ignoring
+TARGET create
+Info : core 0 selected
+Info : gap8_adv_debug_itf tap selected
+Info : adv_dbg_unit debug unit selected
+Info : Option 7 is passed to adv_dbg_unit debug unit
+GAP8 INIT TARGET
+Info : clock speed 1500 kHz
+Info : JTAG tap: gap8.cpu tap/device found: 0x149511c3 (mfg: 0x0e1 (Wintec Industries), part: 0x4951, ver: 0x1)
+GAP8 examine target
+Init jtag
+Initialising GAP8 JTAG TAP
+Info : adv debug unit is configured with option BOOT MODE JTAG
+Info : adv debug unit is configured with option ADBG_USE_HISPEED
+Info : gdb port disabled
+--------------------------
+begining flash session (hyperflash)
+--------------------------
+load flasher to L2 memory
+Loading binary through JTAG
+Warn : Burst read timed out
+Instruct flasher to begin flash per se
+device struct address is 470093656
+going to wait on addr GAP_RDY
+wait on gap_rdy done witg buff ptr 0 469828864
+loading image with addr 469828864 addr_min 469828864 and size 262144
+load image done
+wait on gap_rdy done witg buff ptr 0 469828864
+loading image with addr 469566720 addr_min 469828864 and size 240908
+load image done
+flasher is done, exiting
+--------------------------
+flasher is done!
+--------------------------
+--------------------------
+Reset CONFREG to 0
+--------------------------
+Info : JTAG tap: gap8.cpu tap/device found: 0x149511c3 (mfg: 0x0e1 (Wintec Industries), part: 0x4951, ver: 0x1)
+GAP8 examine target
+RESET: jtag boot mode=3
+DEPRECATED! use 'adapter [de]assert' not 'jtag_reset'
+gapy --target=ai_deck  gen_flash_image --boot-loader /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live  -o /module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/flash.img 
+gapy --target=ai_deck --platform=board --work-dir=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV  --config-opt=flash/content/partitions/readfs/files=hex/weights.bin   run --exec-prepare --exec --binary=/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live 
+Launching execution with command:
+gap8-openocd -c 'gdb_port disabled; telnet_port disabled; tcl_port disabled' -f interface/ftdi/olimex-arm-usb-tiny-h.cfg -f target/gap8revb.tcl -f tcl/jtag_boot_entry.tcl -c 'gap8_jtag_load_binary_and_start "/module/data/examples/ddnd-final-11174/gap8_app/BUILD/GAP8_V2/GCC_RISCV/ddnd_live" elf 0x1c000080'
+Open On-Chip Debugger 0.10.0+dev-dirty (2024-09-16-16:56)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'adapter speed' not 'adapter_khz'
+DEPRECATED! use 'adapter driver' not 'interface'
+Warn : Interface already configured, ignoring
+Info : core 0 selected
+0
+TARGET create
+Info : gap8_adv_debug_itf tap selected
+Info : adv_dbg_unit debug unit selected
+Info : Option 7 is passed to adv_dbg_unit debug unit
+GAP8 INIT TARGET
+Info : clock speed 1500 kHz
+Info : JTAG tap: gap8.cpu tap/device found: 0x149511c3 (mfg: 0x0e1 (Wintec Industries), part: 0x4951, ver: 0x1)
+GAP8 examine target
+Init jtag
+Initialising GAP8 JTAG TAP
+Info : adv debug unit is configured with option BOOT MODE JTAG
+Info : adv debug unit is configured with option ADBG_USE_HISPEED
+Info : gdb port disabled
+Loading binary through JTAG
+Info : tcl server disabled
+Info : telnet server disabled
+Warn : Burst read timed out
+DDND_LIVE_START
+Warn : Burst read timed out
+DDND_LIVE_READY model=2be0691f baud=921600 arena=348160 buffer=46720
+DDND_LIVE seq=0 capture_us=2161499 infer_us=1491669 input_crc=8cfebfe5 depth_min=-61 depth_max=-38 depth_sum=-1044205 flags=1
+DDND_LIVE seq=1 capture_us=4061340 infer_us=1491822 input_crc=30fbf39f depth_min=-63 depth_max=-41 depth_sum=-1045548 flags=1
+DDND_LIVE seq=2 capture_us=6061187 infer_us=1491852 input_crc=36992c95 depth_min=-62 depth_max=-39 depth_sum=-1039991 flags=1
+DDND_LIVE seq=3 capture_us=7994384 infer_us=1491852 input_crc=34c08114 depth_min=-60 depth_max=-40 depth_sum=-1036219 flags=1
+DDND_LIVE seq=4 capture_us=9894226 infer_us=1491821 input_crc=a443f71b depth_min=-60 depth_max=-37 depth_sum=-1024008 flags=1
+DDND_LIVE seq=5 capture_us=11827392 infer_us=1491699 input_crc=485de3d2 depth_min=-63 depth_max=-38 depth_sum=-1030135 flags=1
+DDND_LIVE seq=6 capture_us=13760589 infer_us=1491729 input_crc=92422078 depth_min=-62 depth_max=-40 depth_sum=-1038186 flags=1
+DDND_LIVE seq=7 capture_us=15727081 infer_us=1491700 input_crc=1b301c71 depth_min=-59 depth_max=-37 depth_sum=-1035274 flags=1
+DDND_LIVE seq=8 capture_us=17660278 infer_us=1491852 input_crc=d2ab2583 depth_min=-62 depth_max=-39 depth_sum=-1043275 flags=1
+DDND_LIVE seq=9 capture_us=19593444 infer_us=1491699 input_crc=5dbf8b2c depth_min=-60 depth_max=-41 depth_sum=-1048604 flags=1
+DDND_LIVE seq=10 capture_us=21526641 infer_us=1491883 input_crc=8d76da14 depth_min=-61 depth_max=-38 depth_sum=-1048068 flags=1
+DDND_LIVE seq=11 capture_us=23626464 infer_us=1491699 input_crc=2462bd8f depth_min=-62 depth_max=-38 depth_sum=-1037947 flags=1
+DDND_LIVE seq=12 capture_us=25659637 infer_us=1491638 input_crc=da805fbc depth_min=-60 depth_max=-38 depth_sum=-1030618 flags=1
+DDND_LIVE seq=13 capture_us=27792785 infer_us=1492004 input_crc=8bcb0613 depth_min=-59 depth_max=-40 depth_sum=-1036705 flags=1
+DDND_LIVE seq=14 capture_us=29859313 infer_us=1491851 input_crc=634d6131 depth_min=-61 depth_max=-41 depth_sum=-1045355 flags=1
+DDND_LIVE seq=15 capture_us=31925811 infer_us=1491760 input_crc=701c75e2 depth_min=-61 depth_max=-39 depth_sum=-1052879 flags=1
+DDND_LIVE seq=16 capture_us=33958984 infer_us=1491974 input_crc=178afe84 depth_min=-63 depth_max=-40 depth_sum=-1052743 flags=1
+DDND_LIVE seq=17 capture_us=36058807 infer_us=1491822 input_crc=dabd2293 depth_min=-62 depth_max=-40 depth_sum=-1045316 flags=1
+DDND_LIVE seq=18 capture_us=38125305 infer_us=1491669 input_crc=b1cdf8b0 depth_min=-62 depth_max=-39 depth_sum=-1043334 flags=1
+DDND_LIVE seq=19 capture_us=40225158 infer_us=1491730 input_crc=796c7528 depth_min=-60 depth_max=-36 depth_sum=-1036440 flags=1
+DDND_LIVE seq=20 capture_us=42291656 infer_us=1491699 input_crc=79b16d28 depth_min=-59 depth_max=-38 depth_sum=-1035756 flags=1
+DDND_LIVE seq=21 capture_us=44358154 infer_us=1491761 input_crc=a9180b84 depth_min=-60 depth_max=-41 depth_sum=-1038816 flags=1
+DDND_LIVE seq=22 capture_us=46424652 infer_us=1491760 input_crc=954131ca depth_min=-62 depth_max=-40 depth_sum=-1048698 flags=1
+DDND_LIVE seq=23 capture_us=48791137 infer_us=1491760 input_crc=7f5430d6 depth_min=-61 depth_max=-40 depth_sum=-1027696 flags=1
+DDND_LIVE seq=24 capture_us=50890960 infer_us=1491821 input_crc=7b5fbb05 depth_min=-61 depth_max=-38 depth_sum=-1036262 flags=1
+DDND_LIVE seq=25 capture_us=52924133 infer_us=1491974 input_crc=e36259e0 depth_min=-60 depth_max=-39 depth_sum=-1045370 flags=1
+DDND_LIVE seq=26 capture_us=55023956 infer_us=1491700 input_crc=4b099b38 depth_min=-60 depth_max=-37 depth_sum=-1035157 flags=1

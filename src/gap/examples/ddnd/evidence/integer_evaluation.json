@@ -1,0 +1,1639 @@
+{
+  "samples_requested_per_domain_split": 64,
+  "postprocessing": "host float sigmoid; inverse metres .01+9.99*sigmoid; image-space corners",
+  "export_weights_sha256": "2be0691fb77bc2109933e3f0b1ec1fa1f7e5b0b82e15028cd944bbbcaf61aa76",
+  "splits": {
+    "val": {
+      "metrics": {
+        "dense_C_vs_QAT_disparity_mae": 1.2411540561529933e-06,
+        "dense_C_vs_QAT_corner_heatmaps_mae": 0.0,
+        "dense_C_vs_QAT_corner_offsets_mae": 0.0,
+        "dense_C_vs_QAT_visibility_logits_mae": 0.0,
+        "inverse_mae": 0.10224190833978355,
+        "inverse_mse": 0.025303184772201347,
+        "depth_mae_m": 1.7089511901140213,
+        "depth_absrel": 0.3150837067514658,
+        "near_depth_mae_m": 0.5206882509494554,
+        "near_dangerous_overestimate_gt_05m": 0.3506983453768273,
+        "gate_C_vs_QAT_disparity_mae": 5.736209828910433e-07,
+        "gate_C_vs_QAT_corner_heatmaps_mae": 0.0,
+        "gate_C_vs_QAT_corner_offsets_mae": 0.0,
+        "gate_C_vs_QAT_visibility_logits_mae": 0.0,
+        "visibility_accuracy": 0.9140625,
+        "visible_recall": 0.9166666666666666,
+        "absent_specificity": 0.9107142857142857,
+        "corner_error_px": 4.202981284923023,
+        "C_vs_QAT_corner_decoded_disagreement_px": 0.0
+      },
+      "counts": {
+        "dense_C_vs_QAT_disparity_mae": 1310720,
+        "dense_C_vs_QAT_corner_heatmaps_mae": 20480,
+        "dense_C_vs_QAT_corner_offsets_mae": 40960,
+        "dense_C_vs_QAT_visibility_logits_mae": 256,
+        "inverse_mae": 1310720,
+        "inverse_mse": 1310720,
+        "depth_mae_m": 1310720,
+        "depth_absrel": 1310720,
+        "near_depth_mae_m": 300854,
+        "near_dangerous_overestimate_gt_05m": 300854,
+        "gate_C_vs_QAT_disparity_mae": 1310720,
+        "gate_C_vs_QAT_corner_heatmaps_mae": 20480,
+        "gate_C_vs_QAT_corner_offsets_mae": 40960,
+        "gate_C_vs_QAT_visibility_logits_mae": 256,
+        "visibility_accuracy": 256,
+        "visible_recall": 144,
+        "absent_specificity": 112,
+        "corner_error_px": 144,
+        "C_vs_QAT_corner_decoded_disagreement_px": 144
+      },
+      "samples": [
+        {
+          "domain": "dense",
+          "index": 4,
+          "id": "00523d45ec1ac904f5a6c702",
+          "group": "eth_finetuning/acquisition3"
+        },
+        {
+          "domain": "dense",
+          "index": 98,
+          "id": "062a4bbe4fb752a503041e73",
+          "group": "eth_finetuning/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 28,
+          "id": "022e7bd3a2ab227d1d355fa7",
+          "group": "lorenzo_bellone/acquisition18"
+        },
+        {
+          "domain": "dense",
+          "index": 19,
+          "id": "0160203e816e01101b0f271e",
+          "group": "lorenzo_bellone/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 2,
+          "id": "00134db762c0b75367321610",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition23"
+        },
+        {
+          "domain": "dense",
+          "index": 3,
+          "id": "0045f2af4b7f4f593177a1fa",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 78,
+          "id": "0532d3d7ba46eb15acc065e7",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 35,
+          "id": "02b9c4eb9a2bcc0506152359",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition46"
+        },
+        {
+          "domain": "dense",
+          "index": 350,
+          "id": "14f2dc58820bd82d272538c5",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition20"
+        },
+        {
+          "domain": "dense",
+          "index": 12,
+          "id": "00fc86cc8d22a7ff8fc5e27d",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 16,
+          "id": "01306e8123f5fa25ab9a4e8a",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition1"
+        },
+        {
+          "domain": "dense",
+          "index": 1,
+          "id": "00117d338d5ff767ed9519ef",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition41"
+        },
+        {
+          "domain": "dense",
+          "index": 0,
+          "id": "000bf34a87e13e9cf0accdba",
+          "group": "michal_barcis/acquisition30"
+        },
+        {
+          "domain": "dense",
+          "index": 6,
+          "id": "0091aefaa3526daae27495b2",
+          "group": "michal_barcis/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 25,
+          "id": "02125ca0efd8589542151394",
+          "group": "tii_finetuning/dataset-session2/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 69,
+          "id": "04ddfe04c1a5a4867be97439",
+          "group": "tii_finetuning/dataset-session2/acquisition37"
+        },
+        {
+          "domain": "dense",
+          "index": 1362,
+          "id": "5524dfa66cc2b6871107089a",
+          "group": "eth_finetuning/acquisition3"
+        },
+        {
+          "domain": "dense",
+          "index": 1100,
+          "id": "457a47441c477a28c0e7d552",
+          "group": "eth_finetuning/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 1398,
+          "id": "5717f23cab02722c817d466b",
+          "group": "lorenzo_bellone/acquisition18"
+        },
+        {
+          "domain": "dense",
+          "index": 1084,
+          "id": "45001b7b996f140f70764dfc",
+          "group": "lorenzo_bellone/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 1517,
+          "id": "5e273b2b62072d9f128a8fba",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition23"
+        },
+        {
+          "domain": "dense",
+          "index": 1165,
+          "id": "49e3963d9802f07b905db5a9",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 1318,
+          "id": "5310b5e14061cc17f6cfc8d6",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 1400,
+          "id": "572b04566ddcac81128d1148",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition46"
+        },
+        {
+          "domain": "dense",
+          "index": 1070,
+          "id": "43e4c5c34954ddbcf8a10257",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition20"
+        },
+        {
+          "domain": "dense",
+          "index": 1647,
+          "id": "662064ff584469613b7d7d43",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 1355,
+          "id": "550341da8f59d461f01f48ce",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition1"
+        },
+        {
+          "domain": "dense",
+          "index": 1560,
+          "id": "60c8ea25fe4a3a180c4fd666",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition41"
+        },
+        {
+          "domain": "dense",
+          "index": 1591,
+          "id": "629e3f0ebbb9c9d1fde18d0d",
+          "group": "michal_barcis/acquisition30"
+        },
+        {
+          "domain": "dense",
+          "index": 905,
+          "id": "380a7315b960b38489d5b619",
+          "group": "michal_barcis/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 1276,
+          "id": "4fc9be6d0b17c8b9d95b9cd3",
+          "group": "tii_finetuning/dataset-session2/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 1366,
+          "id": "554a2ef3b7cac9f4b7951cad",
+          "group": "tii_finetuning/dataset-session2/acquisition37"
+        },
+        {
+          "domain": "dense",
+          "index": 2733,
+          "id": "a92c329ae7b7414e71aadfcc",
+          "group": "eth_finetuning/acquisition3"
+        },
+        {
+          "domain": "dense",
+          "index": 2718,
+          "id": "a8353a15d34409b2a7c89464",
+          "group": "eth_finetuning/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 2714,
+          "id": "a814ead61b9c2e5f13113396",
+          "group": "lorenzo_bellone/acquisition18"
+        },
+        {
+          "domain": "dense",
+          "index": 2740,
+          "id": "a9c07d759fd7e82c50549aec",
+          "group": "lorenzo_bellone/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 2844,
+          "id": "b017096526820878f6746db7",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition23"
+        },
+        {
+          "domain": "dense",
+          "index": 2655,
+          "id": "a467e50e40d08d26726f1dc0",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 2894,
+          "id": "b323d2d4977f96d2a9466336",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 2781,
+          "id": "acb62464f6e928428b434dd2",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition46"
+        },
+        {
+          "domain": "dense",
+          "index": 2021,
+          "id": "7ec3e617510b0284e0f6aa7b",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition20"
+        },
+        {
+          "domain": "dense",
+          "index": 2813,
+          "id": "ae53b25d24187c45190c4d6f",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 2623,
+          "id": "a2a160583684c591afd96938",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition1"
+        },
+        {
+          "domain": "dense",
+          "index": 2937,
+          "id": "b5a8f5033e6107f1ae014dea",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition41"
+        },
+        {
+          "domain": "dense",
+          "index": 2905,
+          "id": "b3f7603e09167c07fd0182a6",
+          "group": "michal_barcis/acquisition30"
+        },
+        {
+          "domain": "dense",
+          "index": 2670,
+          "id": "a56898ade48f192f0f3664af",
+          "group": "michal_barcis/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 2521,
+          "id": "9cb506be0d8ed8c7995ff514",
+          "group": "tii_finetuning/dataset-session2/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 2508,
+          "id": "9c0b9af949b2e836713f6166",
+          "group": "tii_finetuning/dataset-session2/acquisition37"
+        },
+        {
+          "domain": "dense",
+          "index": 4131,
+          "id": "ff86b40b72ed4f32a935745d",
+          "group": "eth_finetuning/acquisition3"
+        },
+        {
+          "domain": "dense",
+          "index": 4098,
+          "id": "fd8be5ff707dab4183206989",
+          "group": "eth_finetuning/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 4127,
+          "id": "ff2d339b1c13876bb7bac5fc",
+          "group": "lorenzo_bellone/acquisition18"
+        },
+        {
+          "domain": "dense",
+          "index": 4110,
+          "id": "fe89547af682a0d1286ac0e3",
+          "group": "lorenzo_bellone/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 4137,
+          "id": "ffd80a3a759bfaba1430a927",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition23"
+        },
+        {
+          "domain": "dense",
+          "index": 4125,
+          "id": "ff22d14521fd3bf5ee42cc3a",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 4129,
+          "id": "ff7b749ea9d27237367de29a",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 4134,
+          "id": "ff9479c1cd2ef3e021a58ec6",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition46"
+        },
+        {
+          "domain": "dense",
+          "index": 3357,
+          "id": "ce5184ed54bb567cd2187b68",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition20"
+        },
+        {
+          "domain": "dense",
+          "index": 4139,
+          "id": "ffe83fc7cec84c49cad5f31a",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition39"
+        },
+        {
+          "domain": "dense",
+          "index": 4123,
+          "id": "ff104cfec2fa16d460c13f30",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition1"
+        },
+        {
+          "domain": "dense",
+          "index": 4138,
+          "id": "ffe57dcbaa7a43ab00a5fa48",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition41"
+        },
+        {
+          "domain": "dense",
+          "index": 4128,
+          "id": "ff6948b8ba2e839ae6ecc05f",
+          "group": "michal_barcis/acquisition30"
+        },
+        {
+          "domain": "dense",
+          "index": 4140,
+          "id": "fffafab3f422de708871e4c5",
+          "group": "michal_barcis/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 4071,
+          "id": "fc3aa4a6b1a5c9e21af4ece0",
+          "group": "tii_finetuning/dataset-session2/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 4000,
+          "id": "f7f18cec9ca82694c674f14f",
+          "group": "tii_finetuning/dataset-session2/acquisition37"
+        },
+        {
+          "domain": "gate",
+          "index": 0,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000000.png",
+          "group": "validation_212609060"
+        },
+        {
+          "domain": "gate",
+          "index": 250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000250.png",
+          "group": "validation_212609061"
+        },
+        {
+          "domain": "gate",
+          "index": 500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000500.png",
+          "group": "validation_212609062"
+        },
+        {
+          "domain": "gate",
+          "index": 750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000750.png",
+          "group": "validation_212609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001000.png",
+          "group": "validation_212609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001250.png",
+          "group": "validation_212609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001500.png",
+          "group": "validation_212609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001750.png",
+          "group": "validation_212609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002000.png",
+          "group": "validation_212609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002250.png",
+          "group": "validation_212609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002500.png",
+          "group": "validation_212609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002750.png",
+          "group": "validation_212609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003000.png",
+          "group": "validation_212609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003250.png",
+          "group": "validation_212609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003500.png",
+          "group": "validation_212609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003750.png",
+          "group": "validation_212609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004000.png",
+          "group": "validation_212609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004250.png",
+          "group": "validation_212609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004500.png",
+          "group": "validation_212609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004750.png",
+          "group": "validation_212609079"
+        },
+        {
+          "domain": "gate",
+          "index": 83,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000083.png",
+          "group": "validation_212609060"
+        },
+        {
+          "domain": "gate",
+          "index": 333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000333.png",
+          "group": "validation_212609061"
+        },
+        {
+          "domain": "gate",
+          "index": 583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000583.png",
+          "group": "validation_212609062"
+        },
+        {
+          "domain": "gate",
+          "index": 833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000833.png",
+          "group": "validation_212609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001083.png",
+          "group": "validation_212609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001333.png",
+          "group": "validation_212609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001583.png",
+          "group": "validation_212609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001833.png",
+          "group": "validation_212609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002083.png",
+          "group": "validation_212609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002333.png",
+          "group": "validation_212609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002583.png",
+          "group": "validation_212609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002833.png",
+          "group": "validation_212609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003083.png",
+          "group": "validation_212609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003333.png",
+          "group": "validation_212609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003583.png",
+          "group": "validation_212609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003833.png",
+          "group": "validation_212609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004083.png",
+          "group": "validation_212609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004333.png",
+          "group": "validation_212609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004583.png",
+          "group": "validation_212609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004833.png",
+          "group": "validation_212609079"
+        },
+        {
+          "domain": "gate",
+          "index": 166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000166.png",
+          "group": "validation_212609060"
+        },
+        {
+          "domain": "gate",
+          "index": 416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000416.png",
+          "group": "validation_212609061"
+        },
+        {
+          "domain": "gate",
+          "index": 666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000666.png",
+          "group": "validation_212609062"
+        },
+        {
+          "domain": "gate",
+          "index": 916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000916.png",
+          "group": "validation_212609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001166.png",
+          "group": "validation_212609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001416.png",
+          "group": "validation_212609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001666.png",
+          "group": "validation_212609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_001916.png",
+          "group": "validation_212609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002166.png",
+          "group": "validation_212609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002416.png",
+          "group": "validation_212609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002666.png",
+          "group": "validation_212609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_002916.png",
+          "group": "validation_212609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003166.png",
+          "group": "validation_212609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003416.png",
+          "group": "validation_212609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003666.png",
+          "group": "validation_212609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_003916.png",
+          "group": "validation_212609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004166.png",
+          "group": "validation_212609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004416.png",
+          "group": "validation_212609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004666.png",
+          "group": "validation_212609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_004916.png",
+          "group": "validation_212609079"
+        },
+        {
+          "domain": "gate",
+          "index": 249,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000249.png",
+          "group": "validation_212609060"
+        },
+        {
+          "domain": "gate",
+          "index": 499,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000499.png",
+          "group": "validation_212609061"
+        },
+        {
+          "domain": "gate",
+          "index": 749,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000749.png",
+          "group": "validation_212609062"
+        },
+        {
+          "domain": "gate",
+          "index": 999,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/validation_000999.png",
+          "group": "validation_212609063"
+        }
+      ],
+      "seconds": 13.588677644729614,
+      "all_nodes_integer_reference_bit_exact": true
+    },
+    "test": {
+      "metrics": {
+        "dense_C_vs_QAT_disparity_mae": 7.83028529127705e-07,
+        "dense_C_vs_QAT_corner_heatmaps_mae": 0.0,
+        "dense_C_vs_QAT_corner_offsets_mae": 0.0,
+        "dense_C_vs_QAT_visibility_logits_mae": 0.0,
+        "inverse_mae": 0.08664381902199239,
+        "inverse_mse": 0.016661758307600395,
+        "depth_mae_m": 1.1602405518293382,
+        "depth_absrel": 0.25813127849251033,
+        "near_depth_mae_m": 0.4678876400306267,
+        "near_dangerous_overestimate_gt_05m": 0.32446537492903205,
+        "gate_C_vs_QAT_disparity_mae": 1.067551245625964e-06,
+        "gate_C_vs_QAT_corner_heatmaps_mae": 0.0,
+        "gate_C_vs_QAT_corner_offsets_mae": 0.0,
+        "gate_C_vs_QAT_visibility_logits_mae": 0.0,
+        "visibility_accuracy": 0.90234375,
+        "visible_recall": 0.9324324324324325,
+        "absent_specificity": 0.8611111111111112,
+        "corner_error_px": 3.1197588629013784,
+        "C_vs_QAT_corner_decoded_disagreement_px": 0.0
+      },
+      "counts": {
+        "dense_C_vs_QAT_disparity_mae": 1310720,
+        "dense_C_vs_QAT_corner_heatmaps_mae": 20480,
+        "dense_C_vs_QAT_corner_offsets_mae": 40960,
+        "dense_C_vs_QAT_visibility_logits_mae": 256,
+        "inverse_mae": 1310720,
+        "inverse_mse": 1310720,
+        "depth_mae_m": 1310720,
+        "depth_absrel": 1310720,
+        "near_depth_mae_m": 274772,
+        "near_dangerous_overestimate_gt_05m": 274772,
+        "gate_C_vs_QAT_disparity_mae": 1310720,
+        "gate_C_vs_QAT_corner_heatmaps_mae": 20480,
+        "gate_C_vs_QAT_corner_offsets_mae": 40960,
+        "gate_C_vs_QAT_visibility_logits_mae": 256,
+        "visibility_accuracy": 256,
+        "visible_recall": 148,
+        "absent_specificity": 108,
+        "corner_error_px": 148,
+        "C_vs_QAT_corner_decoded_disagreement_px": 148
+      },
+      "samples": [
+        {
+          "domain": "dense",
+          "index": 38,
+          "id": "0229b3718da576135dce0d0c",
+          "group": "eth_finetuning/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 2,
+          "id": "002be82add851a72ae6619d7",
+          "group": "lorenzo_bellone/acquisition7"
+        },
+        {
+          "domain": "dense",
+          "index": 8,
+          "id": "005846d2a2424fe042f336fa",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition29"
+        },
+        {
+          "domain": "dense",
+          "index": 13,
+          "id": "00c32d4fa4156c88b0b0b12f",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition13"
+        },
+        {
+          "domain": "dense",
+          "index": 3,
+          "id": "003418b1ac5086a49a8bbcf8",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition16"
+        },
+        {
+          "domain": "dense",
+          "index": 0,
+          "id": "000f1c62be48a7d04f171114",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 174,
+          "id": "0713329887a4e86e612f7281",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition32"
+        },
+        {
+          "domain": "dense",
+          "index": 4,
+          "id": "004226dd2c2860cf4e40c791",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 7,
+          "id": "00555413ddf9f34392583703",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition53"
+        },
+        {
+          "domain": "dense",
+          "index": 32,
+          "id": "01c165650e980db1faf8ca87",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition9"
+        },
+        {
+          "domain": "dense",
+          "index": 27,
+          "id": "01ac0244968a61632ed4cbcf",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 82,
+          "id": "03cab7a10f7821805eaf8031",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 34,
+          "id": "01dba7d0f0f11a00758467a4",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition33"
+        },
+        {
+          "domain": "dense",
+          "index": 36,
+          "id": "020b60d90e5c9ec099b91f54",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 1,
+          "id": "001638a6dca404c2bf253ae0",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition62"
+        },
+        {
+          "domain": "dense",
+          "index": 75,
+          "id": "038c834c337b1d59ee0fbca9",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition65"
+        },
+        {
+          "domain": "dense",
+          "index": 5,
+          "id": "0042c3934e4a8f7a84383648",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition21"
+        },
+        {
+          "domain": "dense",
+          "index": 19,
+          "id": "0123a418b2a822fcb9f910fa",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition48"
+        },
+        {
+          "domain": "dense",
+          "index": 14,
+          "id": "00d2381e1d8d05d730464c7e",
+          "group": "tii_finetuning/dataset-session1/acquisition6"
+        },
+        {
+          "domain": "dense",
+          "index": 2456,
+          "id": "68800af5ef84996f3fc526eb",
+          "group": "eth_finetuning/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 1531,
+          "id": "411fdaae10359eed413d64b2",
+          "group": "lorenzo_bellone/acquisition7"
+        },
+        {
+          "domain": "dense",
+          "index": 2067,
+          "id": "57df0f0991b47ae012db0be5",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition29"
+        },
+        {
+          "domain": "dense",
+          "index": 2022,
+          "id": "55c461a37c9077f4e140f7b2",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition13"
+        },
+        {
+          "domain": "dense",
+          "index": 2010,
+          "id": "5528fc1d68fd03964cdc7068",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition16"
+        },
+        {
+          "domain": "dense",
+          "index": 1972,
+          "id": "53b78619e604aab7997c5d1b",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 1950,
+          "id": "529d6011a13ea0d548ec0378",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition32"
+        },
+        {
+          "domain": "dense",
+          "index": 2032,
+          "id": "5689d3fa4e3f478d37494ef6",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 1869,
+          "id": "4eb01a4238d7a266d8b0c9e6",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition53"
+        },
+        {
+          "domain": "dense",
+          "index": 1832,
+          "id": "4cfb6b56c64b8d6e03d32c5a",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition9"
+        },
+        {
+          "domain": "dense",
+          "index": 2112,
+          "id": "59e8af30b7f018ce9d427d62",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 2051,
+          "id": "573187c77599f2f90cfbd678",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 1998,
+          "id": "54cf699f91bd20d4e26aca06",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition33"
+        },
+        {
+          "domain": "dense",
+          "index": 2062,
+          "id": "57b2591066e2b10c8130ae2f",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 2134,
+          "id": "5afee5aa05d250c42a3833ec",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition62"
+        },
+        {
+          "domain": "dense",
+          "index": 2210,
+          "id": "5e651592db35021228b845d0",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition65"
+        },
+        {
+          "domain": "dense",
+          "index": 2109,
+          "id": "59e07f0eb03c42d02641384d",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition21"
+        },
+        {
+          "domain": "dense",
+          "index": 1889,
+          "id": "4f92e79d0e03ac5f1e0040ba",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition48"
+        },
+        {
+          "domain": "dense",
+          "index": 1879,
+          "id": "4eee2fe0b43241cef8de92fe",
+          "group": "tii_finetuning/dataset-session1/acquisition6"
+        },
+        {
+          "domain": "dense",
+          "index": 4311,
+          "id": "b8315df2f3263d63aebfb64b",
+          "group": "eth_finetuning/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 3211,
+          "id": "89176b3fbe85e353a97625bc",
+          "group": "lorenzo_bellone/acquisition7"
+        },
+        {
+          "domain": "dense",
+          "index": 3852,
+          "id": "a4d582423669718b3d502228",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition29"
+        },
+        {
+          "domain": "dense",
+          "index": 4159,
+          "id": "b1ec8e530960bea73a552645",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition13"
+        },
+        {
+          "domain": "dense",
+          "index": 4010,
+          "id": "abd00eed4c8027dde1ea5bf8",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition16"
+        },
+        {
+          "domain": "dense",
+          "index": 4044,
+          "id": "ad2f20bfa2bdf8835741869c",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 3678,
+          "id": "9e5349c60c7cb2cb05a0b486",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition32"
+        },
+        {
+          "domain": "dense",
+          "index": 3982,
+          "id": "aaf5a05e0a042c34478df5ca",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition35"
+        },
+        {
+          "domain": "dense",
+          "index": 3493,
+          "id": "96cc78eab3056aba274a26f6",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition53"
+        },
+        {
+          "domain": "dense",
+          "index": 4211,
+          "id": "b42eb327f8b87e0221b94723",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition9"
+        },
+        {
+          "domain": "dense",
+          "index": 4089,
+          "id": "af2f6a21d8a3015b2effc0f9",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition25"
+        },
+        {
+          "domain": "dense",
+          "index": 3979,
+          "id": "aaef67bb886db2ccf123d3e7",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 4120,
+          "id": "b062f05c5cf098c9e29cec25",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition33"
+        },
+        {
+          "domain": "dense",
+          "index": 4022,
+          "id": "ac2a5c72bf657a00d570c3c6",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition4"
+        },
+        {
+          "domain": "dense",
+          "index": 3900,
+          "id": "a7482d65980b84a1484b0cba",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition62"
+        },
+        {
+          "domain": "dense",
+          "index": 4431,
+          "id": "bd6a09e87a1ddd8c31abbff0",
+          "group": "lorenzo_lamberti/dataset-session3/acquisition65"
+        },
+        {
+          "domain": "dense",
+          "index": 3941,
+          "id": "a94fbd7be83643852e2b7f39",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition21"
+        },
+        {
+          "domain": "dense",
+          "index": 3974,
+          "id": "aacc81c5ade5414240140818",
+          "group": "lorenzo_lamberti/dataset-session4/acquisition48"
+        },
+        {
+          "domain": "dense",
+          "index": 3927,
+          "id": "a88d6ecc2d28bfcfa3395512",
+          "group": "tii_finetuning/dataset-session1/acquisition6"
+        },
+        {
+          "domain": "dense",
+          "index": 6043,
+          "id": "ffd3e23144725c0681895062",
+          "group": "eth_finetuning/acquisition31"
+        },
+        {
+          "domain": "dense",
+          "index": 5924,
+          "id": "faee02ffe1f0a743f5650992",
+          "group": "lorenzo_bellone/acquisition7"
+        },
+        {
+          "domain": "dense",
+          "index": 6038,
+          "id": "ffb8c554b5a7248a8a64bbe1",
+          "group": "lorenzo_lamberti/dataset-session1/acquisition29"
+        },
+        {
+          "domain": "dense",
+          "index": 6041,
+          "id": "ffcbc56104cbdaece25eab2a",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition13"
+        },
+        {
+          "domain": "dense",
+          "index": 6035,
+          "id": "ff9420c94c692f2864e21a7d",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition16"
+        },
+        {
+          "domain": "dense",
+          "index": 6045,
+          "id": "ffea3077412622faf9be927c",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition27"
+        },
+        {
+          "domain": "dense",
+          "index": 5955,
+          "id": "fbfafd29609c23a96c2096d8",
+          "group": "lorenzo_lamberti/dataset-session2/acquisition32"
+        },
+        {
+          "domain": "gate",
+          "index": 0,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000000.png",
+          "group": "test_222609060"
+        },
+        {
+          "domain": "gate",
+          "index": 250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000250.png",
+          "group": "test_222609061"
+        },
+        {
+          "domain": "gate",
+          "index": 500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000500.png",
+          "group": "test_222609062"
+        },
+        {
+          "domain": "gate",
+          "index": 750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000750.png",
+          "group": "test_222609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001000.png",
+          "group": "test_222609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001250.png",
+          "group": "test_222609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001500.png",
+          "group": "test_222609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001750.png",
+          "group": "test_222609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002000.png",
+          "group": "test_222609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002250.png",
+          "group": "test_222609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002500.png",
+          "group": "test_222609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002750.png",
+          "group": "test_222609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003000.png",
+          "group": "test_222609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003250.png",
+          "group": "test_222609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003500.png",
+          "group": "test_222609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003750.png",
+          "group": "test_222609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4000,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004000.png",
+          "group": "test_222609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4250,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004250.png",
+          "group": "test_222609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4500,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004500.png",
+          "group": "test_222609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4750,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004750.png",
+          "group": "test_222609079"
+        },
+        {
+          "domain": "gate",
+          "index": 83,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000083.png",
+          "group": "test_222609060"
+        },
+        {
+          "domain": "gate",
+          "index": 333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000333.png",
+          "group": "test_222609061"
+        },
+        {
+          "domain": "gate",
+          "index": 583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000583.png",
+          "group": "test_222609062"
+        },
+        {
+          "domain": "gate",
+          "index": 833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000833.png",
+          "group": "test_222609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001083.png",
+          "group": "test_222609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001333.png",
+          "group": "test_222609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001583.png",
+          "group": "test_222609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001833.png",
+          "group": "test_222609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002083.png",
+          "group": "test_222609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002333.png",
+          "group": "test_222609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002583.png",
+          "group": "test_222609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002833.png",
+          "group": "test_222609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003083.png",
+          "group": "test_222609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003333.png",
+          "group": "test_222609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003583.png",
+          "group": "test_222609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003833.png",
+          "group": "test_222609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4083,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004083.png",
+          "group": "test_222609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4333,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004333.png",
+          "group": "test_222609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4583,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004583.png",
+          "group": "test_222609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4833,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004833.png",
+          "group": "test_222609079"
+        },
+        {
+          "domain": "gate",
+          "index": 166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000166.png",
+          "group": "test_222609060"
+        },
+        {
+          "domain": "gate",
+          "index": 416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000416.png",
+          "group": "test_222609061"
+        },
+        {
+          "domain": "gate",
+          "index": 666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000666.png",
+          "group": "test_222609062"
+        },
+        {
+          "domain": "gate",
+          "index": 916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000916.png",
+          "group": "test_222609063"
+        },
+        {
+          "domain": "gate",
+          "index": 1166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001166.png",
+          "group": "test_222609064"
+        },
+        {
+          "domain": "gate",
+          "index": 1416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001416.png",
+          "group": "test_222609065"
+        },
+        {
+          "domain": "gate",
+          "index": 1666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001666.png",
+          "group": "test_222609066"
+        },
+        {
+          "domain": "gate",
+          "index": 1916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_001916.png",
+          "group": "test_222609067"
+        },
+        {
+          "domain": "gate",
+          "index": 2166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002166.png",
+          "group": "test_222609068"
+        },
+        {
+          "domain": "gate",
+          "index": 2416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002416.png",
+          "group": "test_222609069"
+        },
+        {
+          "domain": "gate",
+          "index": 2666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002666.png",
+          "group": "test_222609070"
+        },
+        {
+          "domain": "gate",
+          "index": 2916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_002916.png",
+          "group": "test_222609071"
+        },
+        {
+          "domain": "gate",
+          "index": 3166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003166.png",
+          "group": "test_222609072"
+        },
+        {
+          "domain": "gate",
+          "index": 3416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003416.png",
+          "group": "test_222609073"
+        },
+        {
+          "domain": "gate",
+          "index": 3666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003666.png",
+          "group": "test_222609074"
+        },
+        {
+          "domain": "gate",
+          "index": 3916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_003916.png",
+          "group": "test_222609075"
+        },
+        {
+          "domain": "gate",
+          "index": 4166,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004166.png",
+          "group": "test_222609076"
+        },
+        {
+          "domain": "gate",
+          "index": 4416,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004416.png",
+          "group": "test_222609077"
+        },
+        {
+          "domain": "gate",
+          "index": 4666,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004666.png",
+          "group": "test_222609078"
+        },
+        {
+          "domain": "gate",
+          "index": 4916,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_004916.png",
+          "group": "test_222609079"
+        },
+        {
+          "domain": "gate",
+          "index": 249,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000249.png",
+          "group": "test_222609060"
+        },
+        {
+          "domain": "gate",
+          "index": 499,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000499.png",
+          "group": "test_222609061"
+        },
+        {
+          "domain": "gate",
+          "index": 749,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000749.png",
+          "group": "test_222609062"
+        },
+        {
+          "domain": "gate",
+          "index": 999,
+          "id": "/home/cchen/drone_rl/outputs/orange_gate9_10cm_100k_20260907/images/test_000999.png",
+          "group": "test_222609063"
+        }
+      ],
+      "seconds": 13.364606380462646,
+      "all_nodes_integer_reference_bit_exact": true
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "status": "physical_fixture_and_live_verified_persistent_flashed_coldboot_pending",
+  "parent_release": "final-11174",
+  "model_unchanged": true,
+  "fc_hz": 150000000,
+  "cluster_hz": 100000000,
+  "pmu_change": false,
+  "workspace_bytes": 32768,
+  "stack_bytes_per_core": 2048,
+  "physical_fixture": {
+    "output_bytes": 42888,
+    "mismatches": 0,
+    "graph_us": [
+      1465668,
+      1466461
+    ],
+    "vm_log": "ddnd-final-11174-tiled150.log"
+  },
+  "physical_live": {
+    "minimum_frames": 11,
+    "flags": 1,
+    "input_crc_changes": true,
+    "inference_us_approx": 1491700,
+    "vm_log": "ddnd-final-11174-live.log"
+  },
+  "persistent_boot_verified": false,
+  "persistent_flashed": true,
+  "live_camera_verified": true,
+  "uart_host_decoded_verified": false,
+  "persistent_flash_vm_log": "/home/vboxuser/tinympc-nanocockpit/releases/ddnd-final-11174-persistent.log",
+  "persistent_image_bytes": 503052,
+  "gvsoc_graph_us": [
+    1585236,
+    1586730
+  ],
+  "rebuild_gvsoc_exact": true,
+  "normal_live_build_pass": true
+}

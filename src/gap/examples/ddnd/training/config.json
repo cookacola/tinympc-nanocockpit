@@ -1,0 +1,14 @@
+{
+  "init": "artifacts/joint_export/qat_init.pt",
+  "resume": null,
+  "output": "artifacts/qat",
+  "epochs": 10,
+  "patience": 5,
+  "lr": 2e-05,
+  "batch_size": 16,
+  "workers": 4,
+  "device": "cuda",
+  "smoke": 0,
+  "evaluate": null,
+  "stage": "joint"
+}
